@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>מערכת הזמנת חדר דינאמיקלאס</title>
-    <script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=j2588BlBIa1Ae6LeGuJO6WoP8gEN9Ugpmw58FaOrIPD70L4jiENjBCDOV1BleVYhihB8rYmzmlEOGa2eQTj6mQ" charset="UTF-8"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <style>
         :root {
-            --empty-cell: #e8f5e9;  /* ירוק בהיר */
-            --booked-cell: #ffebee; /* אדום בהיר */
-            --pending-cell: #fff3e0; /* כתום בהיר */
+            --empty-cell: #e8f5e9;
+            --booked-cell: #ffebee;
+            --pending-cell: #fff3e0;
             --primary-color: #2196F3;
             --success-color: #4CAF50;
             --danger-color: #f44336;
@@ -180,6 +179,8 @@
             cursor: pointer;
             font-size: 16px;
             transition: all 0.3s;
+            background-color: var(--primary-color);
+            color: white;
         }
 
         button:hover:not(:disabled) {
@@ -293,7 +294,6 @@
     </div>
 
     <script>
-        // Global Variables and Constants
         const CONFIG = {
             systemName: "חדר דינאמיקלאס",
             systemDescription: "חדר מחשבים חדשני ומתקדם המיועד ללמידה פעילה ושיתופית",
@@ -327,16 +327,15 @@
             maxWeeksAhead: 4,
             tempBookingTimeout: 5,
             autoRefreshInterval: 60,
-            statusCheckInterval: 10, // שניות בין בדיקות סטטוס
-            maxStatusCheckAttempts: 10 // מספר מקסימלי של נסיונות בדיקת סטטוס
+            statusCheckInterval: 10,
+            maxStatusCheckAttempts: 10
         };
-
         const scheduler = {
             currentWeek: moment(),
             scheduleData: [],
             teachersList: [],
             classesList: [],
-            activeStatusChecks: new Map(), // מעקב אחר בדיקות סטטוס פעילות
+            activeStatusChecks: new Map(),
 
             tempBookingsManager: {
                 STORAGE_KEY: 'tempBookings_dynamiclass',
@@ -377,7 +376,7 @@
                     const now = Date.now();
                     const validBookings = {};
                     Object.entries(bookings).forEach(([key, booking]) => {
-                        if (booking.expiryTime >now) {
+                        if (booking.expiryTime > now) {
                             validBookings[key] = booking;
                         }
                     });
@@ -406,17 +405,32 @@
             },
 
             async loadSchedule() {
-                const timestamp = Date.now();
-                const response = await fetch(`${CONFIG.urls.schedule}?t=${timestamp}`, {
-                    cache: 'no-store',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache'
+                try {
+                    const timestamp = Date.now();
+                    const baseUrl = CONFIG.urls.schedule;
+                    const urlWithTimestamp = baseUrl.includes('?') ? 
+                        `${baseUrl}&t=${timestamp}` : 
+                        `${baseUrl}?t=${timestamp}`;
+
+                    const response = await fetch(urlWithTimestamp, {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                });
-                const csvText = await response.text();
-                this.scheduleData = this.parseCSV(csvText);
-                this.renderSchedule();
+
+                    const csvText = await response.text();
+                    this.scheduleData = this.parseCSV(csvText);
+                    this.renderSchedule();
+                } catch (error) {
+                    console.error('Error loading schedule:', error);
+                    alert('אירעה שגיאה בטעינת הנתונים. נא לנסות שוב מאוחר יותר.');
+                }
             },
 
             async loadTeachers() {
@@ -435,13 +449,24 @@
 
             async checkBookingStatus(booking) {
                 try {
-                    const response = await fetch(`${CONFIG.urls.schedule}?t=${Date.now()}`, {
+                    const timestamp = Date.now();
+                    const baseUrl = CONFIG.urls.schedule;
+                    const urlWithTimestamp = baseUrl.includes('?') ? 
+                        `${baseUrl}&t=${timestamp}` : 
+                        `${baseUrl}?t=${timestamp}`;
+
+                    const response = await fetch(urlWithTimestamp, {
                         cache: 'no-store',
                         headers: {
                             'Cache-Control': 'no-cache, no-store, must-revalidate',
                             'Pragma': 'no-cache'
                         }
                     });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
                     const csvText = await response.text();
                     const bookings = this.parseCSV(csvText);
                     
@@ -461,7 +486,6 @@
                 const key = `${booking.תאריך}_${booking['שעה במערכת']}`;
                 let attempts = 0;
 
-                // מחיקת בדיקת סטטוס קודמת אם קיימת
                 if (this.activeStatusChecks.has(key)) {
                     clearInterval(this.activeStatusChecks.get(key));
                 }
@@ -485,7 +509,6 @@
 
                 this.activeStatusChecks.set(key, checkInterval);
             },
-
             async handleSubmit(event) {
                 event.preventDefault();
 
@@ -506,7 +529,7 @@
                     // שמירה זמנית
                     this.tempBookingsManager.addBooking(formData);
 
-                    // הכנת נתונים לטופס גוגל
+                    // שליחה לגוגל פורמס
                     const googleFormData = new FormData();
                     googleFormData.append(CONFIG.formFields.teacher, formData['שם המורה']);
                     googleFormData.append(CONFIG.formFields.class, formData['כיתה']);
@@ -514,7 +537,6 @@
                     googleFormData.append(CONFIG.formFields.hour, formData['שעה במערכת']);
                     googleFormData.append(CONFIG.formFields.subject, formData['מקצוע']);
 
-                    // שליחה לגוגל פורמס
                     await fetch(CONFIG.urls.form, {
                         method: 'POST',
                         body: googleFormData,
@@ -586,14 +608,12 @@
             },
 
             getBookingForSlot(date, hour) {
-                // בדיקת הזמנות קבועות
                 const permanentBooking = this.scheduleData.find(booking =>
                     booking.תאריך === date &&
                     parseInt(booking['שעה במערכת']) === hour
                 );
                 if (permanentBooking) return permanentBooking;
 
-                // בדיקת הזמנות זמניות
                 const tempBookings = this.tempBookingsManager.getValidBookings();
                 const key = `${date}_${hour}`;
                 const tempBooking = tempBookings[key];
@@ -622,6 +642,7 @@
                 document.getElementById('overlay').style.display = 'none';
                 document.getElementById('booking-form').style.display = 'none';
             },
+
             updateWeeklyStatus(date) {
                 const weekStart = moment(date).startOf('week');
                 const teacher = document.getElementById('teacher').value;
@@ -644,14 +665,12 @@
                 const weekEnd = weekStart.clone().endOf('week');
                 let count = 0;
 
-                // ספירת הזמנות קבועות
                 count += this.scheduleData.filter(booking => {
                     const bookingDate = moment(booking['תאריך']);
                     return booking[field] === value &&
                            bookingDate.isBetween(weekStart, weekEnd, 'day', '[]');
                 }).length;
 
-                // ספירת הזמנות זמניות
                 const tempBookings = this.tempBookingsManager.getValidBookings();
                 count += Object.values(tempBookings).filter(booking => {
                     const bookingDate = moment(booking['תאריך']);
@@ -667,16 +686,14 @@
                 const today = moment();
                 const maxDate = today.clone().add(CONFIG.maxWeeksAhead, 'weeks').endOf('week');
 
-                if (delta > 0) {
-                    if (newWeek.startOf('week').isAfter(maxDate)) {
-                        alert(`לא ניתן להזמין יותר מ-${CONFIG.maxWeeksAhead} שבועות מראש`);
-                        return;
-                    }
-                } else if (delta < 0) {
-                    if (newWeek.startOf('week').isBefore(today.startOf('week'))) {
-                        alert('לא ניתן להזמין בתאריך שעבר');
-                        return;
-                    }
+                if (delta > 0 && newWeek.startOf('week').isAfter(maxDate)) {
+                    alert(`לא ניתן להזמין יותר מ-${CONFIG.maxWeeksAhead} שבועות מראש`);
+                    return;
+                }
+
+                if (delta < 0 && newWeek.startOf('week').isBefore(today.startOf('week'))) {
+                    alert('לא ניתן להזמין בתאריך שעבר');
+                    return;
                 }
 
                 this.currentWeek = newWeek;
@@ -731,18 +748,14 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             scheduler.loadData(true);
-            
-            // רענון אוטומטי
             setInterval(() => scheduler.loadData(), CONFIG.autoRefreshInterval * 1000);
 
-            // אירועי שינוי בטופס
             document.getElementById('teacher').addEventListener('change', () =>
                 scheduler.updateWeeklyStatus(document.getElementById('selected-date').value));
 
             document.getElementById('class').addEventListener('change', () =>
                 scheduler.updateWeeklyStatus(document.getElementById('selected-date').value));
 
-            // הגשת טופס
             document.getElementById('reservation-form').addEventListener('submit', (e) =>
                 scheduler.handleSubmit(e));
         });
