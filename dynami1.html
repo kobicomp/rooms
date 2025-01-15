@@ -2,16 +2,17 @@
 <html dir="rtl" lang="he">
 <head>
     <meta charset="UTF-8">
-    <title>מערכת שעות למשאב מחשבים</title>
+    <title>מערכת הזמנת חדר דינאמיקלאס</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
     <style>
         :root {
-            --empty-cell: #e3f2fd;
-            --partial-cell: #c8e6c9;
-            --full-cell: #ffebee;
+            --empty-cell: #e8f5e9;  /* ירוק בהיר */
+            --booked-cell: #ffebee; /* אדום בהיר */
+            --pending-cell: #fff3e0; /* כתום בהיר */
             --primary-color: #2196F3;
             --success-color: #4CAF50;
             --danger-color: #f44336;
+            --warning-color: #ff9800;
         }
 
         body {
@@ -28,6 +29,22 @@
             background-color: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .room-info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .room-info h2 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        .room-info p {
+            margin: 10px 0 0 0;
         }
 
         .controls {
@@ -52,8 +69,6 @@
             border-collapse: collapse;
             margin-bottom: 20px;
             background-color: white;
-            border-radius: 8px;
-            overflow: hidden;
         }
 
         th, td {
@@ -70,39 +85,46 @@
 
         .cell-empty {
             background-color: var(--empty-cell);
-            transition: background-color 0.3s;
+            cursor: pointer;
         }
 
-        .cell-partial {
-            background-color: var(--partial-cell);
-            transition: background-color 0.3s;
+        .cell-empty:hover {
+            background-color: #d0e8d1;
         }
 
-        .cell-full {
-            background-color: var(--full-cell);
-            transition: background-color 0.3s;
+        .cell-booked {
+            background-color: var(--booked-cell);
         }
 
-        .cell-content {
-            min-height: 100px;
+        .cell-pending {
+            background-color: var(--pending-cell);
+        }
+
+        .booking-info {
             padding: 8px;
             border-radius: 4px;
+            margin: 5px 0;
         }
 
-        .booking-item {
-            border-bottom: 1px solid #eee;
-            padding: 8px 0;
-            margin-bottom: 8px;
-            transition: background-color 0.3s;
+        .booking-info.pending {
+            border: 2px dashed var(--warning-color);
         }
 
-        .remaining-computers {
-            margin-top: 8px;
-            padding: 4px 8px;
-            border-radius: 4px;
+        .status-text {
             font-weight: bold;
-            text-align: center;
-            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .status-text.available {
+            color: var(--success-color);
+        }
+
+        .status-text.booked {
+            color: var(--danger-color);
+        }
+
+        .status-text.pending {
+            color: var(--warning-color);
         }
 
         .booking-form {
@@ -133,31 +155,21 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             font-weight: bold;
-            color: #333;
         }
 
         .form-group select,
         .form-group input {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            font-size: 16px;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .form-group select:focus,
-        .form-group input:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
         }
 
         button {
@@ -172,21 +184,6 @@
         button:hover:not(:disabled) {
             opacity: 0.9;
             transform: translateY(-1px);
-        }
-
-        button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        .submit-btn {
-            background-color: var(--success-color);
-            color: white;
-        }
-
-        .cancel-btn {
-            background-color: var(--danger-color);
-            color: white;
         }
 
         .loading-overlay {
@@ -210,7 +207,6 @@
             border-top: 5px solid var(--primary-color);
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin-bottom: 15px;
         }
 
         @keyframes spin {
@@ -218,36 +214,32 @@
             100% { transform: rotate(360deg); }
         }
 
-        .loading-text {
-            color: var(--primary-color);
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .info, .error {
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 4px;
+        .error {
+            color: var(--danger-color);
+            margin-top: 5px;
+            font-size: 0.9em;
         }
 
         .info {
-            background-color: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .error {
-            background-color: #ffebee;
-            color: #c62828;
+            color: var(--primary-color);
+            margin-top: 5px;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="room-info">
+            <h2>חדר דינאמיקלאס</h2>
+            <p>חדר מחשבים חדשני ומתקדם המיועד ללמידה פעילה ושיתופית</p>
+            <p>מתאים ל: עד 36 תלמידים, מצויד ב: מקרן, לוח חכם, 6 שולחנות עגולים</p>
+        </div>
+
         <div class="controls">
             <div class="week-nav">
-                <button onclick="changeWeek(-1)">◀ שבוע קודם</button>
+                <button onclick="scheduler.changeWeek(-1)">◀ שבוע קודם</button>
                 <span id="current-week"></span>
-                <button onclick="changeWeek(1)">שבוע הבא ▶</button>
+                <button onclick="scheduler.changeWeek(1)">שבוע הבא ▶</button>
             </div>
         </div>
 
@@ -269,31 +261,28 @@
 
     <div class="overlay" id="overlay"></div>
     <div class="booking-form" id="booking-form">
-        <h3>הזמנת מחשבים</h3>
+        <h3>הזמנת חדר</h3>
         <form id="reservation-form">
             <div class="form-group">
                 <label for="teacher">שם המורה:</label>
                 <select id="teacher" required></select>
+                <div id="teacher-status" class="info"></div>
             </div>
             <div class="form-group">
                 <label for="class">כיתה:</label>
                 <select id="class" required></select>
+                <div id="class-status" class="info"></div>
             </div>
             <div class="form-group">
                 <label for="subject">מקצוע:</label>
                 <input type="text" id="subject" required>
-            </div>
-            <div class="form-group">
-                <label for="computers">מספר מחשבים:</label>
-                <input type="number" id="computers" min="1" required>
-                <div class="info" id="computers-info"></div>
             </div>
             <input type="hidden" id="selected-date">
             <input type="hidden" id="selected-hour">
             <div class="error" id="error-message"></div>
             <div class="info" id="status-message"></div>
             <button type="submit" class="submit-btn">שמור</button>
-            <button type="button" class="cancel-btn" onclick="closeForm()">ביטול</button>
+            <button type="button" class="cancel-btn" onclick="scheduler.closeForm()">ביטול</button>
         </form>
     </div>
 
@@ -302,484 +291,437 @@
         <div class="loading-text">טוען נתונים...</div>
     </div>
     <script>
-    // משתנים גלובליים
-    let currentWeek = moment();
-    let scheduleData = [];
-    let teachersList = [];
-    let classesList = [];
-    let isLoading = false;
-
-    // מפתח ל-localStorage
-    const TEMP_BOOKINGS_KEY = 'tempBookings';
-    const TAB_ID = Math.random().toString(36).substring(7);
-
-    // ניהול הזמנות זמניות עם localStorage
-    const temporaryBookings = {
-        getData() {
-            const stored = localStorage.getItem(TEMP_BOOKINGS_KEY);
-            return stored ? JSON.parse(stored) : [];
-        },
-
-        setData(bookings) {
-            localStorage.setItem(TEMP_BOOKINGS_KEY, JSON.stringify(bookings));
-        },
-
-        addBooking(booking) {
-            const bookings = this.getData();
-            const expiryTime = Date.now() + (5 * 60 * 1000); // 5 דקות
-
-            // בדיקה אם כבר קיימת הזמנה זהה
-            const existingIndex = bookings.findIndex(b =>
-                b.תאריך === booking.תאריך &&
-                b['שעה במערכת'] === booking['שעה במערכת'] &&
-                b['שם המורה'] === booking['שם המורה']
-            );
-
-            if (existingIndex !== -1) {
-                bookings[existingIndex] = { ...booking, expiryTime, tabId: TAB_ID };
-            } else {
-                bookings.push({ ...booking, expiryTime, tabId: TAB_ID });
-            }
-
-            this.setData(bookings);
-        },
-
-        getValidBookings() {
-            const bookings = this.getData();
-            const now = Date.now();
-            const validBookings = bookings.filter(b => b.expiryTime > now);
-
-            if (validBookings.length < bookings.length) {
-                this.setData(validBookings);
-            }
-
-            return validBookings;
-        },
-
-        cleanExpiredBookings() {
-            const validBookings = this.getValidBookings();
-            this.setData(validBookings);
-        }
-    };
-
-    const HOURS_PER_DAY = {
-        0: 7, // ראשון
-        1: 7, // שני
-        2: 5, // שלישי
-        3: 7, // רביעי
-        4: 7, // חמישי
-        5: 4  // שישי
-    };
-
-    // טיפול ברענונים וטאבים מרובים
-    window.addEventListener('storage', (e) => {
-        if (e.key === TEMP_BOOKINGS_KEY) {
-            renderSchedule();
-        }
-    });
-
-    function showLoading() {
-        isLoading = true;
-        document.getElementById('loading-overlay').style.display = 'flex';
-    }
-
-    function hideLoading() {
-        isLoading = false;
-        document.getElementById('loading-overlay').style.display = 'none';
-    }
-
-    async function delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
-    }
-
-    async function loadData(isInitial = false) {
-        showLoading();
-        try {
-            temporaryBookings.cleanExpiredBookings();
-
-            if (isInitial) {
-                await Promise.all([
-                    loadTeachers(),
-                    loadClasses()
-                ]);
-            }
-            await loadSchedule();
-            await delay(500);
-        } catch (error) {
-            console.error('Error loading data:', error);
-            alert('אירעה שגיאה בטעינת הנתונים. אנא רענן את הדף.');
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async function loadSchedule() {
-        const timestamp = Date.now();
-        const response = await fetch(
-            `https://docs.google.com/spreadsheets/d/e/2PACX-1vSIUMj2f-3f_tSaBBAfAlw454-eQUD2q9E1LSIFldqyeYh1T2sZ_VQ5yCwhoURcPuiZslDaEqVJR6B2/pub?output=csv&timestamp=${timestamp}`,
-            {
-                cache: 'no-store',
-                headers: {
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
-            }
-        );
-        const csvText = await response.text();
-        scheduleData = parseCSV(csvText);
-        renderSchedule();
-    }
-
-    async function loadTeachers() {
-        const response = await fetch(
-            'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv',
-            { cache: 'no-store' }
-        );
-        const csvText = await response.text();
-        teachersList = parseList(csvText);
-        populateSelect('teacher', teachersList);
-    }
-
-    async function loadClasses() {
-        const response = await fetch(
-            'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?gid=0&single=true&output=csv',
-            { cache: 'no-store' }
-        );
-        const csvText = await response.text();
-        classesList = parseList(csvText);
-        populateSelect('class', classesList);
-    }
-
-    function getAllBookings(date, hour) {
-        const permanentBookings = scheduleData.filter(booking =>
-            booking['תאריך'] === date &&
-            parseInt(booking['שעה במערכת']) === hour
-        );
-
-        const tempBookings = temporaryBookings.getValidBookings().filter(booking =>
-            booking['תאריך'] === date &&
-            parseInt(booking['שעה במערכת']) === hour
-        );
-
-        // מניעת כפילויות
-        const uniqueBookings = [...permanentBookings];
-        tempBookings.forEach(temp => {
-            if (!permanentBookings.some(perm =>
-                perm['תאריך'] === temp['תאריך'] &&
-                perm['שעה במערכת'] === temp['שעה במערכת'] &&
-                perm['שם המורה'] === temp['שם המורה']
-            )) {
-                uniqueBookings.push(temp);
-            }
-        });
-
-        return uniqueBookings;
-    }
-
-    function getTotalComputers(bookings) {
-        return bookings.reduce((sum, booking) =>
-            sum + parseInt(booking['מספר מחשבים'] || 0), 0
-        );
-    }
-
-    function countWeeklyBookings(field, value, weekStart) {
-        if (!value) return 0;
-
-        const weekEnd = weekStart.clone().endOf('week');
-
-        // ספירת הזמנות קבועות
-        const permanentCount = scheduleData.filter(booking => {
-            const bookingDate = moment(booking['תאריך']);
-            return booking[field] === value &&
-                   bookingDate.isBetween(weekStart, weekEnd, 'day', '[]');
-        }).length;
-
-        // ספירת הזמנות זמניות
-        const tempCount = temporaryBookings.getValidBookings().filter(booking => {
-            const bookingDate = moment(booking['תאריך']);
-            return booking[field] === value &&
-                   bookingDate.isBetween(weekStart, weekEnd, 'day', '[]');
-        }).length;
-
-        return permanentCount + tempCount;
-    }
-
-    function renderSchedule() {
-        const tbody = document.querySelector('#schedule tbody');
-        tbody.innerHTML = '';
-
-        const startOfWeek = currentWeek.clone().startOf('week');
-        document.getElementById('current-week').textContent =
-            `${startOfWeek.format('DD/MM/YYYY')} - ${startOfWeek.clone().endOf('week').format('DD/MM/YYYY')}`;
-
-        for (let hour = 1; hour <= 7; hour++) {
-            const row = document.createElement('tr');
-
-            const hourCell = document.createElement('td');
-            hourCell.textContent = `שעה ${hour}`;
-            hourCell.style.fontWeight = 'bold';
-            row.appendChild(hourCell);
-
-            for (let day = 0; day < 6; day++) {
-                if (hour <= HOURS_PER_DAY[day]) {
-                    const cell = document.createElement('td');
-                    const date = startOfWeek.clone().add(day, 'days').format('YYYY-MM-DD');
-                    const bookings = getAllBookings(date, hour);
-                    const totalComputers = getTotalComputers(bookings);
-
-                    cell.className = getCellClass(totalComputers);
-
-                    let cellContent = '';
-                    bookings.forEach(booking => {
-                        cellContent += `
-                            <div class="booking-item">
-                                <strong>${booking['שם המורה']}</strong><br>
-                                כיתה: ${booking['כיתה']}<br>
-                                ${booking['מקצוע']}<br>
-                                מחשבים: ${booking['מספר מחשבים']}
-                            </div>
-                        `;
-                    });
-
-                    if (totalComputers < 20) {
-                        cellContent += `
-                            <div class="remaining-computers">
-                                נותרו ${20 - totalComputers} מחשבים
-                            </div>
-                        `;
-                        cell.onclick = () => openBookingForm(date, hour);
-                        cell.style.cursor = 'pointer';
-                    }
-
-                    cell.innerHTML = cellContent;
-                    row.appendChild(cell);
-                } else {
-                    const emptyCell = document.createElement('td');
-                    emptyCell.style.backgroundColor = '#eee';
-                    row.appendChild(emptyCell);
-                }
-            }
-            tbody.appendChild(row);
-        }
-    }
-
-    function getCellClass(totalComputers) {
-        if (totalComputers === 0) return 'cell-empty';
-        if (totalComputers === 20) return 'cell-full';
-        return 'cell-partial';
-    }
-
-    function changeWeek(delta) {
-        const newWeek = currentWeek.clone().add(delta, 'weeks');
-        const today = moment();
-        const maxDate = today.clone().add(4, 'weeks').endOf('week');
-
-        if (delta > 0) {
-            if (newWeek.startOf('week').isAfter(maxDate)) {
-                alert('לא ניתן להזמין יותר מ-4 שבועות מראש');
-                return;
-            }
-        } else if (delta < 0) {
-            if (newWeek.startOf('week').isBefore(today.startOf('week'))) {
-                alert('לא ניתן להזמין בתאריך שעבר');
-                return;
-            }
-        }
-
-        currentWeek = newWeek;
-        renderSchedule();
-    }
-
-    function openBookingForm(date, hour) {
-        document.getElementById('selected-date').value = date;
-        document.getElementById('selected-hour').value = hour;
-        document.getElementById('error-message').textContent = '';
-        document.getElementById('status-message').textContent = '';
-        document.getElementById('reservation-form').reset();
-
-        updateComputersLimit(date, hour);
-
-        document.getElementById('overlay').style.display = 'block';
-        document.getElementById('booking-form').style.display = 'block';
-    }
-
-    function closeForm() {
-        document.getElementById('overlay').style.display = 'none';
-        document.getElementById('booking-form').style.display = 'none';
-        document.getElementById('reservation-form').reset();
-        document.getElementById('error-message').textContent = '';
-        document.getElementById('status-message').textContent = '';
-        document.getElementById('computers-info').textContent = '';
-    }
-
-    function updateComputersLimit(date, hour) {
-        const bookings = getAllBookings(date, hour);
-        const totalComputers = getTotalComputers(bookings);
-        const remainingComputers = 20 - totalComputers;
-
-        const computersInput = document.getElementById('computers');
-        const computersInfo = document.getElementById('computers-info');
-
-        computersInput.max = remainingComputers;
-        computersInput.value = Math.min(computersInput.value || 1, remainingComputers);
-        computersInfo.textContent = `ניתן להזמין עד ${remainingComputers} מחשבים`;
-    }
-
-    function parseCSV(csv) {
-        const lines = csv.split('\n');
-        const headers = lines[0].split(',').map(h => h.trim());
-        return lines.slice(1)
-            .map(line => {
-                const values = line.split(',').map(v => v.trim());
-                const entry = {};
-                headers.forEach((header, i) => {
-                    entry[header] = values[i];
-                });
-                return entry;
-            })
-            .filter(entry => entry['שם המורה'] && entry['תאריך']);
-    }
-
-    function parseList(csv) {
-        return csv.split('\n')
-            .map(line => line.split(',')[0].trim())
-            .filter(item => item && item !== 'null' && item !== '');
-    }
-
-    function populateSelect(id, items) {
-        const select = document.getElementById(id);
-        select.innerHTML = `<option value="">בחר/י ${id === 'teacher' ? 'מורה' : 'כיתה'}</option>`;
-        items.forEach(item => {
-            const option = document.createElement('option');
-            option.value = item;
-            option.textContent = item;
-            select.appendChild(option);
-        });
-    }
-
-    document.getElementById('reservation-form').onsubmit = async (e) => {
-        e.preventDefault();
-
-        const teacher = document.getElementById('teacher').value;
-        const className = document.getElementById('class').value;
-        const date = document.getElementById('selected-date').value;
-        const hour = document.getElementById('selected-hour').value;
-        const subject = document.getElementById('subject').value;
-        const computers = parseInt(document.getElementById('computers').value);
-
-        const weekStart = moment(date).startOf('week');
-        const teacherWeeklyBookings = countWeeklyBookings('שם המורה', teacher, weekStart);
-        const classWeeklyBookings = countWeeklyBookings('כיתה', className, weekStart);
-
-        if (teacherWeeklyBookings >= 4) {
-          document.getElementById('error-message').textContent =
-                'למורה כבר יש 4 שיעורים השבוע';
-            return;
-        }
-
-        if (classWeeklyBookings >= 4) {
-            document.getElementById('error-message').textContent =
-                'לכיתה כבר יש 4 שיעורים השבוע';
-            return;
-        }
-
-        const allBookings = getAllBookings(date, parseInt(hour));
-        const totalComputers = getTotalComputers(allBookings);
-
-        if (totalComputers + computers > 20) {
-            document.getElementById('error-message').textContent =
-                'מספר המחשבים המבוקש עולה על הכמות הפנויה';
-            return;
-        }
-
-        showLoading();
-
-        try {
-            const formData = new FormData();
-            formData.append('entry.1323321977', teacher);
-            formData.append('entry.1450687623', className);
-            formData.append('entry.1431651377', date);
-            formData.append('entry.1887686014', hour);
-            formData.append('entry.1869424962', subject);
-            formData.append('entry.2087001113', computers);
-
-            // הוספה להזמנות זמניות
-            const tempBooking = {
-                'שם המורה': teacher,
-                'כיתה': className,
-                'תאריך': date,
-                'שעה במערכת': hour,
-                'מקצוע': subject,
-                'מספר מחשבים': computers
-            };
-
-            temporaryBookings.addBooking(tempBooking);
-
-            // שליחה לגוגל פורמס
-            await fetch('https://docs.google.com/forms/d/1e2M8G_91X9dMbgPahoh7VWMMU9ITKxo_wWMpAEmHTp4/formResponse', {
-                method: 'POST',
-                body: formData,
-                mode: 'no-cors'
-            });
-
-            closeForm();
-            renderSchedule();
-        } catch (error) {
-            document.getElementById('error-message').textContent = 'אירעה שגיאה בשמירת ההזמנה';
-        } finally {
-            hideLoading();
-        }
-    };
-
-    // Event Listeners
-    document.getElementById('teacher').addEventListener('change', () => {
-        const date = document.getElementById('selected-date').value;
-        const weekStart = moment(date).startOf('week');
-        const teacher = document.getElementById('teacher').value;
-        const teacherBookings = countWeeklyBookings('שם המורה', teacher, weekStart);
-
-        const statusMessage = document.getElementById('status-message');
-        if (teacher) {
-            statusMessage.textContent = `למורה ${teacher} יש ${teacherBookings}/4 שיעורים בשבוע זה`;
-        } else {
-            statusMessage.textContent = '';
-        }
-    });
-
-    document.getElementById('class').addEventListener('change', () => {
-        const date = document.getElementById('selected-date').value;
-        const weekStart = moment(date).startOf('week');
-        const className = document.getElementById('class').value;
-        const classBookings = countWeeklyBookings('כיתה', className, weekStart);
-
-        const statusMessage = document.getElementById('status-message');
-        if (className) {
-            statusMessage.textContent = `לכיתה ${className} יש ${classBookings}/4 שיעורים בשבוע זה`;
-        } else {
-            statusMessage.textContent = '';
-        }
-    });
-
-    document.getElementById('computers').addEventListener('input', function(e) {
-        const max = parseInt(this.max);
-        const value = parseInt(this.value);
-
-        if (value > max) {
-            this.value = max;
-        } else if (value < 1) {
-            this.value = 1;
-        }
-    });
-
-    // ניקוי הזמנות שפג תוקפן בטעינת הדף
-    window.addEventListener('load', () => {
-        temporaryBookings.cleanExpiredBookings();
-    });
-
-    // אתחול
-    loadData(true);
-    // רענון נתונים כל דקה
-    setInterval(() => loadData(), 60000);
-</script>
+        // Global Variables and Constants
+        // Configuration
+  const CONFIG = {
+      // הגדרות כלליות
+      systemName: "חדר דינאמיקלאס",
+      systemDescription: "חדר מחשבים חדשני ומתקדם המיועד ללמידה פעילה ושיתופית",
+      systemDetails: "מתאים ל: עד 36 תלמידים, מצויד ב: מקרן, לוח חכם, 6 שולחנות עגולים",
+
+      // הגדרות מערכת שעות
+      daysSchedule: {
+          0: { name: 'ראשון', lessons: 7 },
+          1: { name: 'שני', lessons: 7 },
+          2: { name: 'שלישי', lessons: 5 },
+          3: { name: 'רביעי', lessons: 7 },
+          4: { name: 'חמישי', lessons: 7 },
+          5: { name: 'שישי', lessons: 4 }
+      },
+
+      // קישורים
+      urls: {
+          schedule: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR5uPK7t_NLTPGlZR4sU0owKAwoygzxa_924tiZH3dHDEEl-f72zjw1ra1AxObkbpMpLURv61Rv4a8M/pub?output=csv',
+          teachers: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv',
+          classes: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?gid=0&single=true&output=csv',
+          form: 'https://docs.google.com/forms/d/e/1FAIpQLSeOFAZPcacD0pPV6ffQW4Eg5FpMvLqyTHjz3RZ1i5KMJeGrkQ/viewform'
+      },
+
+      // שדות הטופס
+      formFields: {
+          teacher: "entry.1323321977",
+          class: "entry.1450687623",
+          date: "entry.1431651377",
+          hour: "entry.1887686014",
+          subject: "entry.1869424962"
+      },
+
+      // הגדרות מערכת
+      maxWeeklyBookings: 4,
+      maxWeeksAhead: 4,
+      tempBookingTimeout: 5,
+      autoRefreshInterval: 60
+  };
+
+  // Main Scheduler Object
+  const scheduler = {
+      currentWeek: moment(),
+      scheduleData: [],
+      teachersList: [],
+      classesList: [],
+      isLoading: false,
+
+      // Temporary Bookings Manager
+      tempBookingsManager: {
+          STORAGE_KEY: 'tempBookings_dynamiclass',
+
+          getData() {
+              try {
+                  const stored = localStorage.getItem(this.STORAGE_KEY);
+                  return stored ? JSON.parse(stored) : {};
+              } catch {
+                  return {};
+              }
+          },
+
+          setData(bookings) {
+              localStorage.setItem(this.STORAGE_KEY, JSON.stringify(bookings));
+          },
+
+          addBooking(booking) {
+              const bookings = this.getData();
+              const key = `${booking.תאריך}_${booking['שעה במערכת']}`;
+
+              if (scheduler.scheduleData.some(b =>
+                  b.תאריך === booking.תאריך &&
+                  b['שעה במערכת'] === booking['שעה במערכת'])) {
+                  throw new Error('החדר כבר תפוס בשעה זו');
+              }
+
+              bookings[key] = {
+                  ...booking,
+                  expiryTime: Date.now() + (CONFIG.tempBookingTimeout * 60 * 1000)
+              };
+
+              this.setData(bookings);
+
+              setTimeout(() => {
+                  this.removeExpiredBooking(key);
+              }, CONFIG.tempBookingTimeout * 60 * 1000);
+          },
+
+          removeExpiredBooking(key) {
+              const bookings = this.getData();
+              if (bookings[key]) {
+                  delete bookings[key];
+                  this.setData(bookings);
+                  scheduler.renderSchedule();
+              }
+          },
+
+          getValidBookings() {
+              const bookings = this.getData();
+              const now = Date.now();
+              let hasChanges = false;
+              const validBookings = {};
+
+              Object.entries(bookings).forEach(([key, booking]) => {
+                  if (booking.expiryTime > now) {
+                      validBookings[key] = booking;
+                  } else {
+                      hasChanges = true;
+                  }
+              });
+
+              if (hasChanges) {
+                  this.setData(validBookings);
+              }
+
+              return validBookings;
+          }
+      },
+
+      // Loading Functions
+      async loadData(isInitial = false) {
+          this.showLoading();
+          try {
+              if (isInitial) {
+                  await Promise.all([
+                      this.loadTeachers(),
+                      this.loadClasses()
+                  ]);
+              }
+              await this.loadSchedule();
+              this.tempBookingsManager.getValidBookings();
+              await this.delay(500);
+          } catch (error) {
+              console.error('Error loading data:', error);
+          } finally {
+              this.hideLoading();
+          }
+      },
+
+      async loadSchedule() {
+          const timestamp = Date.now();
+          const response = await fetch(`${CONFIG.urls.schedule}?t=${timestamp}`, {
+              cache: 'no-store',
+              headers: {
+                  'Cache-Control': 'no-cache, no-store, must-revalidate',
+                  'Pragma': 'no-cache'
+              }
+          });
+          const csvText = await response.text();
+          this.scheduleData = this.parseCSV(csvText);
+          this.renderSchedule();
+      },
+
+      async loadTeachers() {
+          const response = await fetch(CONFIG.urls.teachers, { cache: 'no-store' });
+          const csvText = await response.text();
+          this.teachersList = this.parseList(csvText);
+          this.populateSelect('teacher', this.teachersList);
+      },
+
+      async loadClasses() {
+          const response = await fetch(CONFIG.urls.classes, { cache: 'no-store' });
+          const csvText = await response.text();
+          this.classesList = this.parseList(csvText);
+          this.populateSelect('class', this.classesList);
+      },
+
+      // Rendering Functions
+      renderSchedule() {
+          const tbody = document.querySelector('#schedule tbody');
+          tbody.innerHTML = '';
+
+          const startOfWeek = this.currentWeek.clone().startOf('week');
+          document.getElementById('current-week').textContent =
+              `${startOfWeek.format('DD/MM/YYYY')} - ${startOfWeek.clone().endOf('week').format('DD/MM/YYYY')}`;
+
+          for (let hour = 1; hour <= Math.max(...Object.values(CONFIG.daysSchedule).map(d => d.lessons)); hour++) {
+              const row = document.createElement('tr');
+              const hourCell = document.createElement('td');
+              hourCell.textContent = `שעה ${hour}`;
+              hourCell.style.fontWeight = 'bold';
+              row.appendChild(hourCell);
+
+              for (let day = 0; day < 6; day++) {
+                  if (hour <= CONFIG.daysSchedule[day].lessons) {
+                      const cell = document.createElement('td');
+                      const date = startOfWeek.clone().add(day, 'days').format('YYYY-MM-DD');
+                      const booking = this.getBookingForSlot(date, hour);
+
+                      if (booking) {
+                          cell.className = booking.isPending ? 'cell-pending' : 'cell-booked';
+                          cell.innerHTML = `
+                              <div class="booking-info ${booking.isPending ? 'pending' : ''}">
+                                  <div class="status-text ${booking.isPending ? 'pending' : 'booked'}">
+                                      ${booking.isPending ? 'ממתין לאישור' : 'תפוס'}
+                                  </div>
+                                  <strong>${booking['שם המורה']}</strong><br>
+                                  כיתה: ${booking['כיתה']}<br>
+                                  ${booking['מקצוע']}
+                              </div>
+                          `;
+                      } else {
+                          cell.className = 'cell-empty';
+                          cell.innerHTML = '<div class="status-text available">פנוי</div>';
+                          cell.onclick = () => this.openBookingForm(date, hour);
+                      }
+
+                      row.appendChild(cell);
+                  } else {
+                      const emptyCell = document.createElement('td');
+                      emptyCell.style.backgroundColor = '#eee';
+                      row.appendChild(emptyCell);
+                  }
+              }
+              tbody.appendChild(row);
+          }
+      },
+
+      // Form and Booking Functions
+     getBookingForSlot(date, hour) {
+         // בדיקת הזמנות קבועות
+         const permanentBooking = this.scheduleData.find(booking =>
+             booking.תאריך === date &&
+             parseInt(booking['שעה במערכת']) === hour
+         );
+         if (permanentBooking) return permanentBooking;
+
+         // בדיקת הזמנות זמניות
+         const tempBookings = this.tempBookingsManager.getValidBookings();
+         const key = `${date}_${hour}`;
+         const tempBooking = tempBookings[key];
+
+         if (tempBooking) {
+             return { ...tempBooking, isPending: true };
+         }
+
+         return null;
+     },
+
+     async openBookingForm(date, hour) {
+         await this.loadSchedule();  // רענון נתונים
+
+         if (this.getBookingForSlot(date, hour)) {
+             alert('החדר כבר תפוס בשעה זו');
+             return;
+         }
+
+         document.getElementById('selected-date').value = date;
+         document.getElementById('selected-hour').value = hour;
+         document.getElementById('error-message').textContent = '';
+         document.getElementById('status-message').textContent = '';
+         document.getElementById('reservation-form').reset();
+
+         this.updateWeeklyStatus(date);
+
+         document.getElementById('overlay').style.display = 'block';
+         document.getElementById('booking-form').style.display = 'block';
+     },
+
+     closeForm() {
+         document.getElementById('overlay').style.display = 'none';
+         document.getElementById('booking-form').style.display = 'none';
+         document.getElementById('error-message').textContent = '';
+         document.getElementById('status-message').textContent = '';
+     },
+
+     updateWeeklyStatus(date) {
+         const weekStart = moment(date).startOf('week');
+         const teacher = document.getElementById('teacher').value;
+         const className = document.getElementById('class').value;
+
+         if (teacher) {
+             const teacherBookings = this.countWeeklyBookings('שם המורה', teacher, weekStart);
+             document.getElementById('teacher-status').textContent =
+                 `שיעורים השבוע: ${teacherBookings}/${CONFIG.maxWeeklyBookings}`;
+         }
+
+         if (className) {
+             const classBookings = this.countWeeklyBookings('כיתה', className, weekStart);
+             document.getElementById('class-status').textContent =
+                 `שיעורים השבוע: ${classBookings}/${CONFIG.maxWeeklyBookings}`;
+         }
+     },
+
+     countWeeklyBookings(field, value, weekStart) {
+         const weekEnd = weekStart.clone().endOf('week');
+         let count = 0;
+
+         // ספירת הזמנות קבועות
+         count += this.scheduleData.filter(booking => {
+             const bookingDate = moment(booking['תאריך']);
+             return booking[field] === value &&
+                    bookingDate.isBetween(weekStart, weekEnd, 'day', '[]');
+         }).length;
+
+         // ספירת הזמנות זמניות
+         const tempBookings = this.tempBookingsManager.getValidBookings();
+         count += Object.values(tempBookings).filter(booking => {
+             const bookingDate = moment(booking['תאריך']);
+             return booking[field] === value &&
+                    bookingDate.isBetween(weekStart, weekEnd, 'day', '[]');
+         }).length;
+
+         return count;
+     },
+
+     async handleSubmit(event) {
+         event.preventDefault();
+
+         const formData = {
+             'שם המורה': document.getElementById('teacher').value,
+             'כיתה': document.getElementById('class').value,
+             'תאריך': document.getElementById('selected-date').value,
+             'שעה במערכת': document.getElementById('selected-hour').value,
+             'מקצוע': document.getElementById('subject').value
+         };
+
+         try {
+             // בדיקה שהחדר עדיין פנוי
+             await this.loadSchedule();
+             if (this.getBookingForSlot(formData['תאריך'], parseInt(formData['שעה במערכת']))) {
+                 throw new Error('החדר כבר תפוס בשעה זו');
+             }
+
+             // שמירה זמנית
+             this.tempBookingsManager.addBooking(formData);
+
+             // שליחה לגוגל פורמס
+             const googleFormData = new FormData();
+             googleFormData.append(CONFIG.formFields.teacher, formData['שם המורה']);
+             googleFormData.append(CONFIG.formFields.class, formData['כיתה']);
+             googleFormData.append(CONFIG.formFields.date, formData['תאריך']);
+             googleFormData.append(CONFIG.formFields.hour, formData['שעה במערכת']);
+             googleFormData.append(CONFIG.formFields.subject, formData['מקצוע']);
+
+             await fetch(CONFIG.urls.form, {
+                 method: 'POST',
+                 body: googleFormData,
+                 mode: 'no-cors'
+             });
+
+             this.closeForm();
+             this.renderSchedule();
+         } catch (error) {
+             document.getElementById('error-message').textContent = error.message;
+         }
+     },
+
+     // Utility Functions
+     changeWeek(delta) {
+         const newWeek = this.currentWeek.clone().add(delta, 'weeks');
+         const today = moment();
+         const maxDate = today.clone().add(CONFIG.maxWeeksAhead, 'weeks').endOf('week');
+
+         if (delta > 0) {
+             if (newWeek.startOf('week').isAfter(maxDate)) {
+                 alert(`לא ניתן להזמין יותר מ-${CONFIG.maxWeeksAhead} שבועות מראש`);
+                 return;
+             }
+         } else if (delta < 0) {
+             if (newWeek.startOf('week').isBefore(today.startOf('week'))) {
+                 alert('לא ניתן להזמין בתאריך שעבר');
+                 return;
+             }
+         }
+
+         this.currentWeek = newWeek;
+         this.renderSchedule();
+     },
+
+     showLoading() {
+         document.getElementById('loading-overlay').style.display = 'flex';
+     },
+
+     hideLoading() {
+         document.getElementById('loading-overlay').style.display = 'none';
+     },
+
+     async delay(ms) {
+         return new Promise(resolve => setTimeout(resolve, ms));
+     },
+
+     parseCSV(csv) {
+         const lines = csv.split('\n');
+         const headers = lines[0].split(',').map(h => h.trim());
+         return lines.slice(1)
+             .map(line => {
+                 const values = line.split(',').map(v => v.trim());
+                 const entry = {};
+                 headers.forEach((header, i) => {
+                     entry[header] = values[i];
+                 });
+                 return entry;
+             })
+             .filter(entry => entry['שם המורה'] && entry['תאריך']);
+     },
+
+     parseList(csv) {
+         return csv.split('\n')
+             .map(line => line.split(',')[0].trim())
+             .filter(item => item && item !== 'null' && item !== '');
+     },
+
+     populateSelect(id, items) {
+         const select = document.getElementById(id);
+         select.innerHTML = `<option value="">בחר/י ${id === 'teacher' ? 'מורה' : 'כיתה'}</option>`;
+         items.forEach(item => {
+             const option = document.createElement('option');
+             option.value = item;
+             option.textContent = item;
+             select.appendChild(option);
+         });
+     }
+  };
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', () => {
+     scheduler.loadData(true);
+     setInterval(() => scheduler.loadData(), CONFIG.autoRefreshInterval * 1000);
+
+     document.getElementById('teacher').addEventListener('change', () =>
+         scheduler.updateWeeklyStatus(document.getElementById('selected-date').value));
+
+     document.getElementById('class').addEventListener('change', () =>
+         scheduler.updateWeeklyStatus(document.getElementById('selected-date').value));
+
+     document.getElementById('reservation-form').addEventListener('submit', (e) =>
+         scheduler.handleSubmit(e));
+  });
+    </script>
+
 </body>
 </html>
