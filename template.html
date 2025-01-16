@@ -454,7 +454,7 @@
             },
 
             async loadTeachers() {
-                const response = await fetch(CONFIG.urls.teachers);
+                const response= await fetch(CONFIG.urls.teachers);
                 const csvText = await response.text();
                 this.teachersList = this.parseList(csvText);
                 this.populateSelect('teacher', this.teachersList);
@@ -724,6 +724,7 @@
             }
         };
 
+        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             scheduler.loadData(true);
             setInterval(() => scheduler.loadData(), CONFIG.autoRefreshInterval * 1000);
