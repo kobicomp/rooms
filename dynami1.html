@@ -408,10 +408,10 @@
                  try {
                      const timestamp = Date.now();
                      const baseUrl = CONFIG.urls.schedule;
-                     const urlWithTimestamp = baseUrl.includes('?') ? 
-                         `${baseUrl}&t=${timestamp}` : 
+                     const urlWithTimestamp = baseUrl.includes('?') ?
+                         `${baseUrl}&t=${timestamp}` :
                          `${baseUrl}?t=${timestamp}`;
- 
+
                      const response = await fetch(urlWithTimestamp, {
                          cache: 'no-store',
                          headers: {
@@ -419,24 +419,24 @@
                              'Pragma': 'no-cache'
                          }
                      });
- 
+
                      if (!response.ok) {
                          throw new Error(`HTTP error! status: ${response.status}`);
                      }
- 
+
                      const csvText = await response.text();
                      const newScheduleData = this.parseCSV(csvText);
-                     
+
                      // בדיקה האם יש הזמנות זמניות שהתאשרו
                      const tempBookings = this.tempBookingsManager.getValidBookings();
                      Object.entries(tempBookings).forEach(([key, tempBooking]) => {
-                         const isConfirmed = newScheduleData.some(booking => 
-                             booking.תאריך === tempBooking.תאריך && 
+                         const isConfirmed = newScheduleData.some(booking =>
+                             booking.תאריך === tempBooking.תאריך &&
                              booking['שעה במערכת'] === tempBooking['שעה במערכת'] &&
                              booking['שם המורה'] === tempBooking['שם המורה'] &&
                              booking['כיתה'] === tempBooking['כיתה']
                          );
-                         
+
                          if (isConfirmed) {
                              this.tempBookingsManager.removeBooking(key);
                              if (this.activeStatusChecks.has(key)) {
@@ -446,7 +446,7 @@
                              }
                          }
                      });
- 
+
                      this.scheduleData = newScheduleData;
                      this.renderSchedule();
                  } catch (error) {
@@ -472,8 +472,8 @@
                 try {
                     const timestamp = Date.now();
                     const baseUrl = CONFIG.urls.schedule;
-                    const urlWithTimestamp = baseUrl.includes('?') ? 
-                        `${baseUrl}&t=${timestamp}` : 
+                    const urlWithTimestamp = baseUrl.includes('?') ?
+                        `${baseUrl}&t=${timestamp}` :
                         `${baseUrl}?t=${timestamp}`;
 
                     const response = await fetch(urlWithTimestamp, {
@@ -490,9 +490,9 @@
 
                     const csvText = await response.text();
                     const bookings = this.parseCSV(csvText);
-                    
-                    return bookings.some(b => 
-                        b.תאריך === booking.תאריך && 
+
+                    return bookings.some(b =>
+                        b.תאריך === booking.תאריך &&
                         b['שעה במערכת'] === booking['שעה במערכת'] &&
                         b['שם המורה'] === booking['שם המורה'] &&
                         b['כיתה'] === booking['כיתה']
@@ -506,16 +506,16 @@
             startStatusCheck(booking) {
                  const key = `${booking.תאריך}_${booking['שעה במערכת']}`;
                  let attempts = 0;
- 
+
                  // ביטול בדיקה קודמת אם קיימת
                  if (this.activeStatusChecks.has(key)) {
                      clearInterval(this.activeStatusChecks.get(key));
                  }
- 
+
                  const checkInterval = setInterval(async () => {
                      attempts++;
                      await this.loadSchedule(); // שימוש בפונקציית loadSchedule במקום checkBookingStatus
- 
+
                      if (!this.tempBookingsManager.getData()[key]) {
                          // ההזמנה הזמנית נמחקה - כנראה אושרה
                          clearInterval(checkInterval);
@@ -525,56 +525,58 @@
                          this.activeStatusChecks.delete(key);
                          alert('ההזמנה עדיין בהמתנה לאישור. נא לבדוק שוב מאוחר יותר.');
                      }
-                 }, CONFIG.statusCheckInterval * 1000);
- 
+                 }, CONFIG.statusCheckInterval * 3000);
+
                  this.activeStatusChecks.set(key, checkInterval);
              },
-            async handleSubmit(event) {
-                  event.preventDefault();
-  
-                  const formData = {
-                      'שם המורה': document.getElementById('teacher').value,
-                      'כיתה': document.getElementById('class').value,
-                      'תאריך': document.getElementById('selected-date').value,
-                      'שעה במערכת': document.getElementById('selected-hour').value,
-                      'מקצוע': document.getElementById('subject').value
-                  };
-  
-                  try {
-                      // בדיקה אחרונה לפני שמירה
-                      const key = `${formData.תאריך}_${formData['שעה במערכת']}`;
-                      if (this.getBookingForSlot(formData.תאריך, parseInt(formData['שעה במערכת']))) {
-                          throw new Error('החדר כבר תפוס בשעה זו');
-                      }
-  
-                      // שמירה זמנית
-                      this.tempBookingsManager.addBooking(formData);
-                      
-                      // עדכון תצוגה מיידית
-                      this.renderSchedule();
-  
-                      // שליחה לגוגל פורמס
-                      const googleFormData = new FormData();
-                      for (const [field, value] of Object.entries(CONFIG.formFields)) {
-                          googleFormData.append(value, formData[field]);
-                      }
-  
-                      await fetch(CONFIG.urls.form, {
-                          method: 'POST',
-                          body: googleFormData,
-                          mode: 'no-cors'
-                      });
-  
-                      // התחלת בדיקת סטטוס
-                      this.startStatusCheck(formData);
-                      
-                      this.closeForm();
-                      alert('ההזמנה נשלחה ונמצאת בבדיקה. תקבל עדכון כשההזמנה תאושר.');
-                  } catch (error) {
-                      document.getElementById('error-message').textContent = error.message;
-                  }
-              },
-
+             async handleSubmit(event) {
+                   event.preventDefault();
+   
+                   const formData = {
+                       'שם המורה': document.getElementById('teacher').value,
+                       'כיתה': document.getElementById('class').value,
+                       'תאריך': document.getElementById('selected-date').value,
+                       'שעה במערכת': document.getElementById('selected-hour').value,
+                       'מקצוע': document.getElementById('subject').value
+                   };
+   
+                   try {
+                       // בדיקה אחרונה לפני שמירה
+                       const key = `${formData.תאריך}_${formData['שעה במערכת']}`;
+                       if (this.getBookingForSlot(formData.תאריך, parseInt(formData['שעה במערכת']))) {
+                           throw new Error('החדר כבר תפוס בשעה זו');
+                       }
+   
+                       // שמירה זמנית
+                       this.tempBookingsManager.addBooking(formData);
+                       
+                       // עדכון תצוגה מיידית
+                       this.renderSchedule();
+   
+                       // הכנת הנתונים לטופס Google
+                       const googleFormData = new FormData();
+                       googleFormData.append(CONFIG.formFields.teacher, formData['שם המורה']);
+                       googleFormData.append(CONFIG.formFields.class, formData['כיתה']);
+                       googleFormData.append(CONFIG.formFields.date, formData['תאריך']);
+                       googleFormData.append(CONFIG.formFields.hour, formData['שעה במערכת']);
+                       googleFormData.append(CONFIG.formFields.subject, formData['מקצוע']);
+   
+                       // שליחה לטופס Google
+                       await fetch(CONFIG.urls.form, {
+                           method: 'POST',
+                           body: googleFormData,
+                           mode: 'no-cors'
+                       });
+   
+                       // התחלת בדיקת סטטוס
+                       this.startStatusCheck(formData);
+                       
+                       this.closeForm();
+                       alert('ההזמנה נשלחה ונמצאת בבדיקה. תקבל עדכון כשההזמנה תאושר.');
+                   } catch (error) {
+                       document.getElementById('error-message').textContent = error.message;
+                   }
+               },
             renderSchedule() {
                 const tbody = document.querySelector('#schedule tbody');
                 tbody.innerHTML = '';
@@ -585,7 +587,7 @@
 
                 for (let hour = 1; hour <= Math.max(...Object.values(CONFIG.daysSchedule).map(d => d.lessons)); hour++) {
                     const row = document.createElement('tr');
-                    
+
                     // תא שעה
                     const hourCell = document.createElement('td');
                     hourCell.textContent = `שעה ${hour}`;
