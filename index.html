@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>ניהול מערכת הזמנת חדרים</title>
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --secondary-color: #1976D2;
+            --success-color: #4CAF50;
+            --error-color: #f44336;
+            --background-color: #f5f5f5;
+            --card-background: #ffffff;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--background-color);
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--secondary-color);
+        }
+
+        .form-card {
+            background-color: var(--card-background);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .form-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+
+        .form-section h3 {
+            margin-top: 0;
+            color: var(--secondary-color);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .days-schedule {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .day-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .day-input label {
+            margin: 0;
+            font-weight: normal;
+        }
+
+        .day-input input[type="number"] {
+            width: 60px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            color: white;
+        }
+
+        button.primary {
+            background-color: var(--primary-color);
+        }
+
+        button.success {
+            background-color: var(--success-color);
+        }
+
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .preview {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: var(--card-background);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .preview pre {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+
+        #copySuccess {
+            display: none;
+            color: var(--success-color);
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .download-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>יצירת דף הזמנת חדר</h1>
+            <p>מלא את הפרטים הבאים ליצירת דף הזמנות מותאם אישית</p>
+        </div>
+
+        <div class="form-card">
+            <form id="configForm">
+                <div class="form-section">
+                    <h3>פרטי החדר</h3>
+                    <div class="form-group">
+                        <label for="roomName">שם החדר:</label>
+                        <input type="text" id="roomName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="roomDescription">תיאור החדר:</label>
+                        <textarea id="roomDescription" required></textarea>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>קישורי Google</h3>
+                    <div class="form-group">
+                        <label for="formUrl">קישור לטופס Google:</label>
+                        <input type="url" id="formUrl" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sheetUrl">קישור לגיליון התשובות:</label>
+                        <input type="url" id="sheetUrl" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="teachersUrl">קישור לרשימת המורים:</label>
+                        <input type="url" id="teachersUrl" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="classesUrl">קישור לרשימת הכיתות:</label>
+                        <input type="url" id="classesUrl" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>שדות הטופס</h3>
+                    <div class="form-group">
+                        <label for="teacherEntry">מספר Entry לשם המורה:</label>
+                        <input type="text" id="teacherEntry" placeholder="entry.XXXXXXXX" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="classEntry">מספר Entry לכיתה:</label>
+                        <input type="text" id="classEntry" placeholder="entry.XXXXXXXX" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dateEntry">מספר Entry לתאריך:</label>
+                        <input type="text" id="dateEntry" placeholder="entry.XXXXXXXX" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="hourEntry">מספר Entry לשעה:</label>
+                        <input type="text" id="hourEntry" placeholder="entry.XXXXXXXX" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="subjectEntry">מספר Entry למקצוע:</label>
+                        <input type="text" id="subjectEntry" placeholder="entry.XXXXXXXX" required>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>מערכת שעות שבועית</h3>
+                    <div class="days-schedule">
+                        <div class="day-input">
+                            <label for="sunday">ראשון:</label>
+                            <input type="number" id="sunday" min="0" max="12" value="7">
+                        </div>
+                        <div class="day-input">
+                            <label for="monday">שני:</label>
+                            <input type="number" id="monday" min="0" max="12" value="7">
+                        </div>
+                        <div class="day-input">
+                            <label for="tuesday">שלישי:</label>
+                            <input type="number" id="tuesday" min="0" max="12" value="5">
+                        </div>
+                        <div class="day-input">
+                            <label for="wednesday">רביעי:</label>
+                            <input type="number" id="wednesday" min="0" max="12" value="7">
+                        </div>
+                        <div class="day-input">
+                            <label for="thursday">חמישי:</label>
+                            <input type="number" id="thursday" min="0" max="12" value="7">
+                        </div>
+                        <div class="day-input">
+                            <label for="friday">שישי:</label>
+                            <input type="number" id="friday" min="0" max="12" value="4">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button type="submit" class="primary">צור דף</button>
+                    <button type="button" class="success" onclick="copyCode()">העתק קוד</button>
+                    <button type="button" class="success" onclick="downloadFile()">הורד קובץ</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="copySuccess">הקוד הועתק בהצלחה!</div>
+
+        <div class="preview">
+            <h3>תצוגה מקדימה של הקוד:</h3>
+            <pre id="codePreview"></pre>
+        </div>
+    </div>
+
+    <script>
+        let generatedCode = '';
+
+        document.getElementById('configForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                // קריאת התבנית
+                const response = await fetch('template.html');
+                const template = await response.text();
+
+                // יצירת אובייקט הקונפיגורציה
+                const config = {
+                    roomName: document.getElementById('roomName').value,
+                    roomDescription: document.getElementById('roomDescription').value,
+                    urls: {
+                        form: document.getElementById('formUrl').value,
+                        sheet: document.getElementById('sheetUrl').value,
+                        teachers: document.getElementById('teachersUrl').value,
+                        classes: document.getElementById('classesUrl').value
+                    },
+                    entries: {
+                        teacher: document.getElementById('teacherEntry').value,
+                        class: document.getElementById('classEntry').value,
+                        date: document.getElementById('dateEntry').value,
+                        hour: document.getElementById('hourEntry').value,
+                        subject: document.getElementById('subjectEntry').value
+                    },
+                    schedule: {
+                        0: parseInt(document.getElementById('sunday').value),
+                        1: parseInt(document.getElementById('monday').value),
+                        2: parseInt(document.getElementById('tuesday').value),
+                        3: parseInt(document.getElementById('wednesday').value),
+                        4: parseInt(document.getElementById('thursday').value),
+                        5: parseInt(document.getElementById('friday').value)
+                    }
+                };
+
+                // החלפת הערכים בתבנית
+                generatedCode = template
+                    .replace('{{ROOM_NAME}}', config.roomName)
+                    .replace('{{ROOM_DESCRIPTION}}', config.roomDescription)
+                    .replace('{{FORM_URL}}', config.urls.form)
+                    .replace('{{SHEET_URL}}', config.urls.sheet)
+                    .replace('{{TEACHERS_URL}}', config.urls.teachers)
+                    .replace('{{CLASSES_URL}}', config.urls.classes)
+                    .replace('{{TEACHER_ENTRY}}', config.entries.teacher)
+                    .replace('{{CLASS_ENTRY}}', config.entries.class)
+                    .replace('{{DATE_ENTRY}}', config.entries.date)
+                    .replace('{{HOUR_ENTRY}}', config.entries.hour)
+                    .replace('{{SUBJECT_ENTRY}}', config.entries.subject)
+                    .replace('{{SCHEDULE_CONFIG}}', JSON.stringify(config.schedule, null, 4));
+
+                // הצגת הקוד
+                document.getElementById('codePreview').textContent = generatedCode;
+            } catch (error) {
+                console.error('Error generating code:', error);
+                alert('אירעה שגיאה ביצירת הקוד');
+            }
+        });
+
+        function copyCode() {
+            if (!generatedCode) {
+                alert('נא ליצור קוד תחילה');
+                return;
+            }
+
+            navigator.clipboard.writeText(generatedCode).then(() => {
+                const successMsg = document.getElementById('copySuccess');
+                successMsg.style.display = 'block';
+                setTimeout(() => {
+                    successMsg.style.display = 'none';
+                }, 3000);
+            });
+        }
+
+        function downloadFile() {
+            if (!generatedCode) {
+                alert('נא ליצור קוד תחילה');
+                return;
+            }
+
+            const blob = new Blob([generatedCode], { type: 'text/html' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'room-booking.html';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
