@@ -89,22 +89,6 @@
             gap: 10px;
         }
 
-        .day-input label {
-            margin: 0;
-            font-weight: normal;
-        }
-
-        .day-input input[type="number"] {
-            width: 60px;
-        }
-
-        .actions {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-
         button {
             padding: 10px 20px;
             border: none;
@@ -113,19 +97,11 @@
             font-size: 16px;
             transition: all 0.3s;
             color: white;
-        }
-
-        button.primary {
             background-color: var(--primary-color);
-        }
-
-        button.success {
-            background-color: var(--success-color);
         }
 
         button:hover {
             opacity: 0.9;
-            transform: translateY(-1px);
         }
 
         .preview {
@@ -136,24 +112,23 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        .preview pre {
+        pre {
             background-color: #f8f9fa;
             padding: 15px;
             border-radius: 4px;
             overflow-x: auto;
-            font-size: 14px;
         }
 
-        #copySuccess {
-            display: none;
-            color: var(--success-color);
-            text-align: center;
-            margin-top: 10px;
+        .info-text {
+            color: var(--secondary-color);
+            font-size: 0.9em;
+            margin-top: 5px;
         }
 
-        .download-section {
-            text-align: center;
-            margin-top: 20px;
+        .error-text {
+            color: var(--error-color);
+            font-size: 0.9em;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -183,10 +158,12 @@
                     <div class="form-group">
                         <label for="formUrl">קישור לטופס Google:</label>
                         <input type="url" id="formUrl" required>
+                        <div class="info-text">הקישור יותאם אוטומטית לפורמט השליחה הנכון</div>
                     </div>
                     <div class="form-group">
                         <label for="sheetUrl">קישור לגיליון התשובות:</label>
                         <input type="url" id="sheetUrl" required>
+                        <div class="info-text">יש להשתמש בקישור של גיליון שפורסם לווב</div>
                     </div>
                     <div class="form-group">
                         <label for="teachersUrl">קישור לרשימת המורים:</label>
@@ -199,26 +176,26 @@
                 </div>
 
                 <div class="form-section">
-                    <h3>שדות הטופס</h3>
+                    <h3>מספרי Entry של הטופס</h3>
                     <div class="form-group">
-                        <label for="teacherEntry">מספר Entry לשם המורה:</label>
-                        <input type="text" id="teacherEntry" placeholder="entry.XXXXXXXX" required>
+                        <label for="teacherEntry">שדה שם המורה:</label>
+                        <input type="text" id="teacherEntry" required pattern="entry\.\d+" placeholder="entry.1234567890">
                     </div>
                     <div class="form-group">
-                        <label for="classEntry">מספר Entry לכיתה:</label>
-                        <input type="text" id="classEntry" placeholder="entry.XXXXXXXX" required>
+                        <label for="classEntry">שדה כיתה:</label>
+                        <input type="text" id="classEntry" required pattern="entry\.\d+" placeholder="entry.1234567890">
                     </div>
                     <div class="form-group">
-                        <label for="dateEntry">מספר Entry לתאריך:</label>
-                        <input type="text" id="dateEntry" placeholder="entry.XXXXXXXX" required>
+                        <label for="dateEntry">שדה תאריך:</label>
+                        <input type="text" id="dateEntry" required pattern="entry\.\d+" placeholder="entry.1234567890">
                     </div>
                     <div class="form-group">
-                        <label for="hourEntry">מספר Entry לשעה:</label>
-                        <input type="text" id="hourEntry" placeholder="entry.XXXXXXXX" required>
+                        <label for="hourEntry">שדה שעה:</label>
+                        <input type="text" id="hourEntry" required pattern="entry\.\d+" placeholder="entry.1234567890">
                     </div>
                     <div class="form-group">
-                        <label for="subjectEntry">מספר Entry למקצוע:</label>
-                        <input type="text" id="subjectEntry" placeholder="entry.XXXXXXXX" required>
+                        <label for="subjectEntry">שדה מקצוע:</label>
+                        <input type="text" id="subjectEntry" required pattern="entry\.\d+" placeholder="entry.1234567890">
                     </div>
                 </div>
 
@@ -227,40 +204,38 @@
                     <div class="days-schedule">
                         <div class="day-input">
                             <label for="sunday">ראשון:</label>
-                            <input type="number" id="sunday" min="0" max="12" value="7">
+                            <input type="number" id="sunday" min="0" max="12" value="7" required>
                         </div>
                         <div class="day-input">
                             <label for="monday">שני:</label>
-                            <input type="number" id="monday" min="0" max="12" value="7">
+                            <input type="number" id="monday" min="0" max="12" value="7" required>
                         </div>
                         <div class="day-input">
                             <label for="tuesday">שלישי:</label>
-                            <input type="number" id="tuesday" min="0" max="12" value="5">
+                            <input type="number" id="tuesday" min="0" max="12" value="5" required>
                         </div>
                         <div class="day-input">
                             <label for="wednesday">רביעי:</label>
-                            <input type="number" id="wednesday" min="0" max="12" value="7">
+                            <input type="number" id="wednesday" min="0" max="12" value="7" required>
                         </div>
                         <div class="day-input">
                             <label for="thursday">חמישי:</label>
-                            <input type="number" id="thursday" min="0" max="12" value="7">
+                            <input type="number" id="thursday" min="0" max="12" value="7" required>
                         </div>
                         <div class="day-input">
                             <label for="friday">שישי:</label>
-                            <input type="number" id="friday" min="0" max="12" value="4">
+                            <input type="number" id="friday" min="0" max="12" value="4" required>
                         </div>
                     </div>
                 </div>
 
-                <div class="actions">
-                    <button type="submit" class="primary">צור דף</button>
-                    <button type="button" class="success" onclick="copyCode()">העתק קוד</button>
-                    <button type="button" class="success" onclick="downloadFile()">הורד קובץ</button>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="submit">צור דף</button>
+                    <button type="button" onclick="copyCode()" style="margin-right: 10px;">העתק קוד</button>
+                    <button type="button" onclick="downloadFile()" style="margin-right: 10px;">הורד קובץ</button>
                 </div>
             </form>
         </div>
-
-        <div id="copySuccess">הקוד הועתק בהצלחה!</div>
 
         <div class="preview">
             <h3>תצוגה מקדימה של הקוד:</h3>
@@ -271,61 +246,64 @@
     <script>
         let generatedCode = '';
 
+        // טיפול בקישור הטופס
+        document.getElementById('formUrl').addEventListener('input', function() {
+            let url = this.value;
+            if (url.includes('/viewform') || url.includes('/edit')) {
+                url = url.replace(/\/viewform$|\/edit$/, '/formResponse');
+                this.value = url;
+            }
+        });
+
+        // יצירת תצורת לוח הזמנים
+        function generateScheduleConfig() {
+            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+            const daysHebrew = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
+
+            const config = {};
+            days.forEach((day, index) => {
+                config[index] = {
+                    name: daysHebrew[index],
+                    lessons: parseInt(document.getElementById(day).value)
+                };
+            });
+            return config;
+        }
+
+        // טיפול בהגשת הטופס
         document.getElementById('configForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+
             try {
-                // קריאת התבנית
                 const response = await fetch('template.html');
-                const template = await response.text();
+                let template = await response.text();
 
-                // יצירת אובייקט הקונפיגורציה
-                const config = {
-                    roomName: document.getElementById('roomName').value,
-                    roomDescription: document.getElementById('roomDescription').value,
-                    urls: {
-                        form: document.getElementById('formUrl').value,
-                        sheet: document.getElementById('sheetUrl').value,
-                        teachers: document.getElementById('teachersUrl').value,
-                        classes: document.getElementById('classesUrl').value
-                    },
-                    entries: {
-                        teacher: document.getElementById('teacherEntry').value,
-                        class: document.getElementById('classEntry').value,
-                        date: document.getElementById('dateEntry').value,
-                        hour: document.getElementById('hourEntry').value,
-                        subject: document.getElementById('subjectEntry').value
-                    },
-                    schedule: {
-                        0: parseInt(document.getElementById('sunday').value),
-                        1: parseInt(document.getElementById('monday').value),
-                        2: parseInt(document.getElementById('tuesday').value),
-                        3: parseInt(document.getElementById('wednesday').value),
-                        4: parseInt(document.getElementById('thursday').value),
-                        5: parseInt(document.getElementById('friday').value)
-                    }
-                };
+                // איסוף הנתונים
+                const scheduleConfig = generateScheduleConfig();
+                let formUrl = document.getElementById('formUrl').value;
+                formUrl = formUrl.replace(/\/viewform$|\/edit$/, '/formResponse');
 
-                // החלפת הערכים בתבנית
-                generatedCode = template
-                    .replace('{{ROOM_NAME}}', config.roomName)
-                    .replace('{{ROOM_DESCRIPTION}}', config.roomDescription)
-                    .replace('{{FORM_URL}}', config.urls.form)
-                    .replace('{{SHEET_URL}}', config.urls.sheet)
-                    .replace('{{TEACHERS_URL}}', config.urls.teachers)
-                    .replace('{{CLASSES_URL}}', config.urls.classes)
-                    .replace('{{TEACHER_ENTRY}}', config.entries.teacher)
-                    .replace('{{CLASS_ENTRY}}', config.entries.class)
-                    .replace('{{DATE_ENTRY}}', config.entries.date)
-                    .replace('{{HOUR_ENTRY}}', config.entries.hour)
-                    .replace('{{SUBJECT_ENTRY}}', config.entries.subject)
-                    .replace('{{SCHEDULE_CONFIG}}', JSON.stringify(config.schedule, null, 4));
+                // החלפת התגיות בתבנית
+                template = template
+                    .replace(/\{\{ROOM_NAME\}\}/g, document.getElementById('roomName').value)
+                    .replace(/\{\{ROOM_DESCRIPTION\}\}/g, document.getElementById('roomDescription').value)
+                    .replace(/\{\{FORM_URL\}\}/g, formUrl)
+                    .replace(/\{\{SHEET_URL\}\}/g, document.getElementById('sheetUrl').value)
+                    .replace(/\{\{TEACHERS_URL\}\}/g, document.getElementById('teachersUrl').value)
+                    .replace(/\{\{CLASSES_URL\}\}/g, document.getElementById('classesUrl').value)
+                    .replace(/\{\{TEACHER_ENTRY\}\}/g, document.getElementById('teacherEntry').value)
+                    .replace(/\{\{CLASS_ENTRY\}\}/g, document.getElementById('classEntry').value)
+                    .replace(/\{\{DATE_ENTRY\}\}/g, document.getElementById('dateEntry').value)
+                    .replace(/\{\{HOUR_ENTRY\}\}/g, document.getElementById('hourEntry').value)
+                    .replace(/\{\{SUBJECT_ENTRY\}\}/g, document.getElementById('subjectEntry').value)
+                    .replace('{{SCHEDULE_CONFIG}}', JSON.stringify(scheduleConfig, null, 4));
 
-                // הצגת הקוד
-                document.getElementById('codePreview').textContent = generatedCode;
+                // שמירה והצגה של הקוד
+                generatedCode = template;
+                document.getElementById('codePreview').textContent = template;
             } catch (error) {
-                console.error('Error generating code:', error);
-                alert('אירעה שגיאה ביצירת הקוד');
+                console.error('Error:', error);
+                alert('אירעה שגיאה ביצירת הדף: ' + error.message);
             }
         });
 
@@ -334,14 +312,8 @@
                 alert('נא ליצור קוד תחילה');
                 return;
             }
-
-            navigator.clipboard.writeText(generatedCode).then(() => {
-                const successMsg = document.getElementById('copySuccess');
-                successMsg.style.display = 'block';
-                setTimeout(() => {
-                    successMsg.style.display = 'none';
-                }, 3000);
-            });
+            navigator.clipboard.writeText(generatedCode);
+            alert('הקוד הועתק בהצלחה!');
         }
 
         function downloadFile() {
@@ -349,7 +321,6 @@
                 alert('נא ליצור קוד תחילה');
                 return;
             }
-
             const blob = new Blob([generatedCode], { type: 'text/html' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
