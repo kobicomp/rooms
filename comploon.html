@@ -39,77 +39,68 @@
 
         // פונקציה לניתוח נתוני הגיליון
         const analyzeSheetData = async (sheetUrl) => {
-      try {
-          const response = await fetch(sheetUrl);
-          if (!response.ok) throw new Error('Failed to load sheet data');
-          const text = await response.text();
-          
-          const result = Papa.parse(text, {
-              header: true,
-              skipEmptyLines: true
-          });
-  
-          console.log('Raw Sheet Data:', result.data);
-  
-          // מיפוי המחשבים
-          const computers = new Map();
-          
-          // מיון השורות מהחדש לישן
-          const rows = result.data;
-          
-          // לוג של השורות הגולמיות
-          console.log('Raw Rows:', rows.slice(0, 2));
-          
-          // בדיקת שמות העמודות
-          console.log('Column Names:', Object.keys(rows[0] || {}));
-  
-          // מיון השורות מהחדש לישן
-          const sortedRows = rows
-              .filter(row => {
-                  const isValid = Boolean(row['פריט']?.trim());
-                  if (!isValid) {
-                      console.log('Invalid Row:', row);
-                  }
-                  return isValid;
-              })
-              .sort((a, b) => {
-                  const dateA = new Date(a['תאריך'] || '');
-                  const dateB = new Date(b['תאריך'] || '');
-                  return dateB - dateA;
-              });
-  
-          // עיבוד כל שורה
-          sortedRows.forEach(row => {
-              const computerName = row['פריט']?.trim();
-              if (!computerName) return;
-              
-              // אם לא ראינו את המחשב הזה עדיין
-              if (!computers.has(computerName)) {
-                  const computer = new Computer(computerName);
-                  const action = row['פעולה']?.trim();
-                  computer.isBorrowed = action === 'השאלה';
-                  if (computer.isBorrowed) {
-                      computer.borrowedBy = row['שם']?.trim();
-                      computer.class = row['כיתה']?.trim();
-                  }
-                  computers.set(computerName, computer);
-                  
-                  console.log('Added Computer:', {
-                      name: computerName,
-                      status: computer
-                  });
-              }
-          });
-  
-          const computersArray = Array.from(computers.values());
-          console.log('Final Computers:', computersArray);
-          
-          return computers;
-      } catch (error) {
-          console.error('Error analyzing sheet:', error);
-          throw error;
-      }
-  };
+    try {
+        const response = await fetch(sheetUrl);
+        if (!response.ok) throw new Error('Failed to load sheet data');
+        const text = await response.text();
+        
+        console.log('Raw response text:', text.substring(0, 200));
+        
+        const result = Papa.parse(text, {
+            header: true,
+            skipEmptyLines: true,
+            transformHeader: header => header.trim()
+        });
+
+        console.log('Parsed response data:', result.data);
+
+        // מיפוי המחשבים
+        const computers = new Map();
+
+        // בדיקה אם יש את העמודות הנדרשות
+        const hasRequiredColumns = result.meta.fields?.includes('פריט') &&
+                                 result.meta.fields?.includes('שם') &&
+                                 result.meta.fields?.includes('פעולה');
+
+        if (!hasRequiredColumns) {
+            console.error('Missing required columns:', result.meta.fields);
+            throw new Error('Invalid data format - missing required columns');
+        }
+        
+        // עיבוד השורות
+        for (const row of result.data) {
+            if (!row['פריט']) continue;
+            
+            const computerName = row['פריט'].trim();
+            console.log('Processing computer:', computerName, row);
+            
+            const lastKnownStatus = computers.get(computerName);
+            const currentTimestamp = new Date(row['תאריך'] || '');
+            
+            // אם אין סטטוס קודם או שזה עדכון חדש יותר
+            if (!lastKnownStatus || 
+                !lastKnownStatus.lastUpdate || 
+                currentTimestamp > lastKnownStatus.lastUpdate) {
+                
+                const computer = new Computer(computerName);
+                computer.isBorrowed = row['פעולה']?.trim() === 'השאלה';
+                computer.borrowedBy = row['שם']?.trim() || null;
+                computer.class = row['כיתה']?.trim() || null;
+                computer.lastUpdate = currentTimestamp;
+                
+                computers.set(computerName, computer);
+                console.log('Updated computer status:', computer);
+            }
+        }
+        
+        console.log('Final computers map:', computers);
+        return computers;
+
+    } catch (error) {
+        console.error('Error in analyzeSheetData:', error);
+        throw error;
+    }
+};
 
         const ComputerLendingSystem = () => {
             const [users, setUsers] = useState([]);
@@ -130,18 +121,34 @@
 
             // טעינת נתונים מקובץ CSV
             const loadCSVData = async (url) => {
-                const response = await fetch(url);
-                const text = await response.text();
-                const result = Papa.parse(text, {
-                    header: false,
-                    skipEmptyLines: true
-                });
-                return result.data
-                    .filter(row => row[0])
-                    .map(row => ({
-                        value: row[0].trim()
-                    }));
-            };
+      try {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const text = await response.text();
+          
+          // הדפסת הטקסט הגולמי לבדיקה
+          console.log('Raw CSV text:', text.substring(0, 200));
+          
+          const result = Papa.parse(text, {
+              header: false,  // שינוי ל-false כי אין כותרות
+              skipEmptyLines: true,
+              transform: (value) => value.trim()
+          });
+          
+          // מפה את השורות הראשונות לאובייקטים
+          const items = result.data
+              .filter(row => row && row.length > 0)  // וודא שיש נתונים בשורה
+              .map(row => ({
+                  value: row[0]  // קח רק את הערך הראשון מכל שורה
+              }));
+              
+          console.log('Parsed Items:', items);
+          return items;
+      } catch (error) {
+          console.error('Error in loadCSVData:', error);
+          throw error;
+      }
+  };
 
             // רענון סטטוס המחשבים
             const refreshComputersStatus = useCallback(async () => {
