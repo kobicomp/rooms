@@ -11,8 +11,8 @@
     <pre id="output"></pre>
 
     <script>
-        // כתובת Google Sheets שתרצה לבדוק
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
+        // כתובת Google Sheets המעודכנת
+        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
 
         // פונקציה לטעינת הנתונים
         async function loadSheetData() {
@@ -30,17 +30,13 @@
 
                 // ניתוח CSV עם PapaParse
                 const result = Papa.parse(text, {
-                    header: true,  // שימוש בשורה הראשונה ככותרות
+                    header: false,  // ללא כותרות כדי לראות את כל הנתונים
                     skipEmptyLines: true
                 });
 
                 // הצגת הנתונים
                 const outputElement = document.getElementById('output');
                 
-                // הדפסת כותרות העמודות
-                outputElement.textContent += "כותרות העמודות:\n";
-                outputElement.textContent += JSON.stringify(result.meta.fields, null, 2) + "\n\n";
-
                 // הדפסת כל השורות
                 outputElement.textContent += "נתונים:\n";
                 result.data.forEach((row, index) => {
@@ -50,6 +46,12 @@
 
                 // הדפסת מספר השורות
                 outputElement.textContent += `סה"כ שורות: ${result.data.length}`;
+
+                // הדפסת אורך כל שורה
+                outputElement.textContent += "\n\nאורך השורות:\n";
+                result.data.forEach((row, index) => {
+                    outputElement.textContent += `שורה ${index + 1}: אורך ${row.length} עמודות\n`;
+                });
 
             } catch (error) {
                 console.error('שגיאה בטעינת הנתונים:', error);
