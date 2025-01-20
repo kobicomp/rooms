@@ -482,92 +482,70 @@
         // Render the app
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<ComputerLendingSystem />);
-        // ייבוא של PapaParse מתבצע דרך תג script ב-HTML
-
-const analyzeComputerStatus = async () => {
+        const analyzeComputerStatus = async () => {
     try {
-        // URL של הקובץ עם רשימת המחשבים
-        const COMPUTERS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv';
-        // URL של הקובץ עם היסטוריית ההשאלות
+        // URL של הגיליון עם היסטוריית ההשאלות
         const HISTORY_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
-
-        // קריאת רשימת המחשבים
-        const computersResponse = await fetch(COMPUTERS_URL);
-        const computersText = await computersResponse.text();
-        const computersResult = Papa.parse(computersText, {
-            header: false,
-            skipEmptyLines: true
-        });
 
         // קריאת היסטוריית ההשאלות
         const historyResponse = await fetch(HISTORY_URL);
         const historyText = await historyResponse.text();
+        console.log("Raw CSV data:", historyText.substring(0, 200)); // לבדיקה
+
         const historyResult = Papa.parse(historyText, {
-            header: false,
+            header: false, // אין כותרות
             skipEmptyLines: true
         });
 
-        // יצירת מפת מחשבים
-        const computers = new Map();
+        // מעבר על כל השורות ומציאת הפעולה האחרונה על כל מחשב
+        const computerStatus = {};
 
-        // אתחול כל המחשבים כזמינים
-        computersResult.data.forEach(row => {
-            if (row[0]) {
-                computers.set(row[0].trim(), {
-                    name: row[0].trim(),
-                    isBorrowed: false,
-                    borrowedBy: null,
-                    class: null
-                });
-            }
-        });
+        // מעבר מהסוף להתחלה
+        const rows = historyResult.data;
+        for (let i = rows.length - 1; i >= 0; i--) {
+            const row = rows[i];
+            // עמודות: תאריך[0], שם[1], פעולה[2], כיתה[3], מחשב[4]
+            const computer = row[4]?.trim();
+            const action = row[2]?.trim();
+            const user = row[1]?.trim();
+            const date = row[0]?.trim();
 
-        console.log('Initial computers list:', computers);
-
-        // עיבוד היסטוריית ההשאלות (מהסוף להתחלה)
-        const historyRows = historyResult.data.slice(1); // דילוג על שורת כותרות
-        for (let i = historyRows.length - 1; i >= 0; i--) {
-            const row = historyRows[i];
-            // עמודות: תאריך[0], שם[1], פעולה[2], כיתה[3], פריט[4]
-            const computerName = row[4]?.trim();
-            
-            if (!computerName) continue;
-            
-            const computer = computers.get(computerName);
-            if (computer) {
-                // אם זו הפעם הראשונה שאנחנו רואים את המחשב הזה
-                if (!computer.lastAction) {
-                    const action = row[2]?.trim();
-                    computer.isBorrowed = action === 'השאלה';
-                    computer.borrowedBy = computer.isBorrowed ? row[1]?.trim() : null;
-                    computer.class = computer.isBorrowed ? row[3]?.trim() : null;
-                    computer.lastAction = action;
-                    computer.lastActionDate = row[0];
-                }
+            // אם זה מחשב שעוד לא ראינו
+            if (computer && action && !computerStatus[computer]) {
+                computerStatus[computer] = {
+                    name: computer,
+                    isBorrowed: action === 'השאלה',
+                    borrowedBy: action === 'השאלה' ? user : null,
+                    lastAction: action,
+                    lastDate: date
+                };
+                
+                console.log(`${computer}: ${action} by ${user} on ${date}`);
             }
         }
 
-        // הדפסת סטטוס סופי
-        console.log('\nFinal Computer Status:');
-        console.log('=====================');
-        Array.from(computers.values()).forEach(computer => {
+        // הדפסת סיכום
+        console.log("\nComputer Status Summary:");
+        console.log("=======================");
+        Object.values(computerStatus).forEach(computer => {
             console.log(`${computer.name}: ${computer.isBorrowed ? 
-                `מושאל ל-${computer.borrowedBy} (${computer.class})` : 
-                'זמין להשאלה'}`
+                `מושאל ל-${computer.borrowedBy}` : 
+                'זמין להשאלה'} (${computer.lastAction} - ${computer.lastDate})`
             );
         });
 
-        return computers;
+        return computerStatus;
     } catch (error) {
-        console.error('Error analyzing computer status:', error);
+        console.error('Error:', error);
         throw error;
     }
 };
 
 // הפעלת הפונקציה
-analyzeComputerStatus()
-    .then(() => console.log('Analysis completed'))
-    .catch(error => console.error('Analysis failed:', error));
+analyzeComputerStatus().then(status => {
+    console.log("\nDetailed Status:");
+    console.log(status);
+});
     </script>
 </body>
 </html>
