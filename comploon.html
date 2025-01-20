@@ -45,79 +45,118 @@
 
         // טעינה וניתוח נתוני מחשבים
         const analyzeSheetData = async (sheetUrl) => {
-            try {
-                const response = await fetch(sheetUrl);
-                if (!response.ok) throw new Error('Failed to load sheet data');
-                const text = await response.text();
-                
-                // קריאת הקובץ בלי כותרות
-                const result = Papa.parse(text, {
-                    header: false,
-                    skipEmptyLines: true
-                });
-
-                console.log('Loading sheet data, total rows:', result.data.length);
-
-                // מיפוי המחשבים
-                const computers = new Map();
-                
-                // טעינת רשימת המחשבים המקורית
-                const computersResponse = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv');
-                const computersText = await computersResponse.text();
-                const computersResult = Papa.parse(computersText, {
-                    header: false,
-                    skipEmptyLines: true
-                });
-
-                // יצירת מחשב לכל שם ברשימה
-                computersResult.data.forEach(row => {
-                    if (row[0]) {
-                        const computer = new Computer(row[0].trim());
-                        computers.set(computer.name, computer);
-                    }
-                });
-
-                console.log('Initial computers list:', computers);
-
-                // מעבר על נתוני הטופס מהסוף להתחלה
-                const rows = result.data.slice(1); // דילוג על שורת כותרות
-                for (let i = rows.length - 1; i >= 0; i--) {
-                    const row = rows[i];
-                    const computerName = row[4]?.trim(); // עמודה E - שם הפריט
-                    
-                    if (!computerName) continue;
-                    
-                    const computer = computers.get(computerName);
-                    if (computer && (!computer.lastUpdate || new Date(row[0]) > computer.lastUpdate)) {
-                        const action = row[2]?.trim(); // עמודה C - סוג הפעולה
-                        computer.isBorrowed = action === 'השאלה';
-                        if (computer.isBorrowed) {
-                            computer.borrowedBy = row[1]?.trim(); // עמודה B - שם המשאיל
-                            computer.class = row[3]?.trim(); // עמודה D - כיתה
-                        } else {
-                            computer.borrowedBy = null;
-                            computer.class = null;
-                        }
-                        computer.lastUpdate = new Date(row[0]); // עמודה A - תאריך
-
-                        console.log(`Updated ${computerName}:`, {
-                            action,
-                            isBorrowed: computer.isBorrowed,
-                            borrowedBy: computer.borrowedBy,
-                            lastUpdate: computer.lastUpdate
-                        });
-                    }
-                }
-
-                console.log('Final computers status:', Array.from(computers.values()));
-                return computers;
-
-            } catch (error) {
-                console.error('Error analyzing sheet:', error);
-                throw error;
-            }
-        };
-
+      try {
+          const response = await fetch(sheetUrl);
+          if (!response.ok) throw new Error('Failed to load sheet data');
+          const text = await response.text();
+          
+          // Parse without headers to get raw data
+          const result = Papa.parse(text, {
+              header: false,
+              skipEmptyLines: true
+          });
+  
+          console.log('Total rows in sheet:', result.data.length);
+          console.log('Raw data sample (first 5 rows):', 
+              result.data.slice(0, 5).map(row => JSON.stringify(row))
+          );
+  
+          // Create computers map
+          const computers = new Map();
+          
+          // Load original computers list
+          const computersResponse = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv');
+          const computersText = await computersResponse.text();
+          const computersResult = Papa.parse(computersText, {
+              header: false,
+              skipEmptyLines: true
+          });
+  
+          // Create Computer instances
+          computersResult.data.forEach(row => {
+              if (row[0]) {
+                  const computerName = row[0].trim();
+                  const computer = new Computer(computerName);
+                  computers.set(computerName, computer);
+                  console.log(`Initialized computer: ${computerName}`);
+              }
+          });
+  
+          console.log('Initial computers count:', computers.size);
+  
+          // Detailed logging of rows processing
+          const rows = result.data.slice(1); // Skip headers
+          console.log('Processing rows in reverse order');
+  
+          const computerStatusLog = {};
+  
+          for (let i = rows.length - 1; i >= 0; i--) {
+              const row = rows[i];
+              const computerName = row[4]?.trim(); // Column E - Computer name
+              
+              if (!computerName) {
+                  console.log(`Skipping row ${i} - No computer name`);
+                  continue;
+              }
+              
+              const computer = computers.get(computerName);
+              if (!computer) {
+                  console.log(`Computer not found: ${computerName}`);
+                  continue;
+              }
+  
+              // Track all status changes for this computer
+              if (!computerStatusLog[computerName]) {
+                  computerStatusLog[computerName] = [];
+              }
+              computerStatusLog[computerName].push({
+                  rowIndex: i,
+                  date: row[0],
+                  action: row[2]?.trim(),
+                  borrowedBy: row[1]?.trim(),
+                  class: row[3]?.trim()
+              });
+  
+              // Update only if this is the most recent row for this computer
+              if (!computer.lastUpdate || new Date(row[0]) > computer.lastUpdate) {
+                  const action = row[2]?.trim(); // Column C - Action type
+                  
+                  computer.isBorrowed = action === 'השאלה';
+                  if (computer.isBorrowed) {
+                      computer.borrowedBy = row[1]?.trim(); // Column B - Borrower name
+                      computer.class = row[3]?.trim(); // Column D - Class
+                  } else {
+                      computer.borrowedBy = null;
+                      computer.class = null;
+                  }
+                  computer.lastUpdate = new Date(row[0]); // Column A - Date
+  
+                  console.log(`Updated computer ${computerName}:`, {
+                      action,
+                      isBorrowed: computer.isBorrowed,
+                      borrowedBy: computer.borrowedBy,
+                      lastUpdate: computer.lastUpdate
+                  });
+              }
+          }
+  
+          // Log full status tracking for debugging
+          console.log('Computer Status Tracking:');
+          Object.entries(computerStatusLog).forEach(([computerName, statuses]) => {
+              console.log(`\n${computerName}:`);
+              statuses.forEach((status, index) => {
+                  console.log(`  ${index + 1}. Row ${status.rowIndex}: ${status.date} - ${status.action} by ${status.borrowedBy}`);
+              });
+          });
+  
+          console.log('Final computers status:', Array.from(computers.values()));
+          return computers;
+  
+      } catch (error) {
+          console.error('Error analyzing sheet:', error);
+          throw error;
+      }
+  };
         // טעינת נתונים מקובץ CSV
         const loadCSVData = async (url) => {
             const response = await fetch(url);
