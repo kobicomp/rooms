@@ -46,6 +46,7 @@
             const [selectedItems, setSelectedItems] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [error, setError] = useState(null);
+            const [submitting, setSubmitting] = useState(false);
 
             const loadCSVData = async (url) => {
                 try {
@@ -60,7 +61,6 @@
                         skipEmptyLines: true
                     });
                     
-                    // Convert array of arrays to array of objects with value property
                     return result.data.map(row => ({
                         value: row[0]
                     }));
@@ -76,15 +76,12 @@
                         setIsLoading(true);
                         setError(null);
                         
-                        // Load users
                         const usersData = await loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv&gid=0');
                         setUsers(usersData);
 
-                        // Load classes
                         const classesData = await loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?output=csv&gid=0');
                         setClasses(classesData);
 
-                        // Load items
                         const itemsData = await loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv&gid=0');
                         setItems(itemsData);
 
@@ -102,22 +99,24 @@
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 
+                if (submitting) return;
+                
                 try {
+                    setSubmitting(true);
                     const form = new FormData();
                     form.append('entry.1927360815', selectedUser);
                     form.append('entry.1595080383', selectedAction);
                     form.append('entry.93664657', selectedClass);
+                    // שליחת כל הפריטים מופרדים בפסיקים
+                    form.append('entry.973123435', selectedItems.join(', '));
                     
-                    for (const item of selectedItems) {
-                        form.append('entry.973123435', item);
-                        
-                        await fetch('https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse', {
-                            method: 'POST',
-                            body: form,
-                            mode: 'no-cors'
-                        });
-                    }
+                    await fetch('https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse', {
+                        method: 'POST',
+                        body: form,
+                        mode: 'no-cors'
+                    });
                     
+                    // ניקוי הטופס
                     setSelectedItems([]);
                     setSelectedUser('');
                     setSelectedClass('');
@@ -125,6 +124,8 @@
                 } catch (error) {
                     console.error('Error submitting form:', error);
                     alert('אירעה שגיאה בשליחת הטופס: ' + error.message);
+                } finally {
+                    setSubmitting(false);
                 }
             };
 
@@ -135,7 +136,7 @@
             if (error) {
                 return (
                     <div className="text-center p-4">
-                        <div className="text-red-500 mb-4">{error}</div>
+                        <div className="text-red 500 mb-4">{error}</div>
                         <button 
                             onClick={() => window.location.reload()} 
                             className="bg-blue-500 text-white px-4 py-2 rounded"
@@ -149,12 +150,6 @@
             return (
                 <div className="container mx-auto p-4">
                     <h1 className="text-3xl font-bold mb-6 text-center">מערכת השאלת מחשבים</h1>
-                    
-                    <div className="mb-4 text-sm text-center">
-                        מספר משתמשים: {users.length},
-                        מספר כיתות: {classes.length},
-                        מספר פריטים: {items.length}
-                    </div>
                     
                     <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6 bg-white p-6 rounded-lg shadow">
                         <div className="flex flex-col">
@@ -227,14 +222,19 @@
                                     </div>
                                 ))}
                             </div>
+                            {selectedItems.length > 0 && (
+                                <div className="mt-2 text-sm text-gray-600">
+                                    נבחרו {selectedItems.length} פריטים
+                                </div>
+                            )}
                         </div>
 
                         <button 
                             type="submit" 
-                            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-200"
-                            disabled={selectedItems.length === 0}
+                            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-200 disabled:bg-gray-400"
+                            disabled={selectedItems.length === 0 || submitting}
                         >
-                            שלח טופס
+                            {submitting ? 'שולח...' : 'שלח טופס'}
                         </button>
                     </form>
                 </div>
