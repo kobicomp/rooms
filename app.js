@@ -3,7 +3,6 @@ const { useState, useEffect, useCallback } = React;
 const RESPONSE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
 
 const ComputerLendingSystem = () => {
-    // State variables
     const [users, setUsers] = useState([]);
     const [classes, setClasses] = useState([]);
     const [items, setItems] = useState([]);
@@ -17,7 +16,6 @@ const ComputerLendingSystem = () => {
     const [submitting, setSubmitting] = useState(false);
     const [lastRefresh, setLastRefresh] = useState(null);
 
-    // Load CSV data
     const loadCSVData = async (url) => {
         try {
             const response = await fetch(url);
@@ -32,7 +30,7 @@ const ComputerLendingSystem = () => {
             });
             
             return result.data.map(row => ({
-                value: row[0]
+                value: row[0]?.trim() || ''
             }));
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -40,7 +38,6 @@ const ComputerLendingSystem = () => {
         }
     };
 
-    // Load borrowed items
     const loadBorrowedItems = useCallback(async () => {
         try {
             const response = await fetch(RESPONSE_SHEET_URL);
@@ -51,18 +48,34 @@ const ComputerLendingSystem = () => {
                 skipEmptyLines: true
             });
 
-            // Create status object for each item
-            const itemStatus = result.data.reduce((acc, row) => {
-                if (row['שם'] && row['פריט']) {
-                    acc[row['פריט']] = {
-                        user: row['שם'],
-                        action: row['פעולה'],
-                        timestamp: row['תאריך']
+            console.log('Raw borrowed items data:', result.data);
+
+            // Sort rows by date in descending order
+            const sortedRows = result.data
+                .filter(row => row['שם'] && row['פריט'] && row['פעולה'])
+                .map(row => ({
+                    ...row,
+                    timestamp: new Date(row['תאריך'])
+                }))
+                .sort((a, b) => b.timestamp - a.timestamp);
+
+            console.log('Sorted rows:', sortedRows);
+
+            // Build borrowed items status
+            const itemStatus = {};
+            for (const row of sortedRows) {
+                const itemName = row['פריט'].trim();
+                // Only update status if we haven't seen this item yet (first occurrence is most recent)
+                if (!itemStatus[itemName]) {
+                    itemStatus[itemName] = {
+                        user: row['שם'].trim(),
+                        action: row['פעולה'].trim(),
+                        timestamp: row.timestamp
                     };
                 }
-                return acc;
-            }, {});
+            }
 
+            console.log('Final items status:', itemStatus);
             setBorrowedItems(itemStatus);
             setLastRefresh(new Date());
         } catch (error) {
@@ -71,7 +84,6 @@ const ComputerLendingSystem = () => {
         }
     }, []);
 
-    // Initial data load
     useEffect(() => {
         const loadAllData = async () => {
             try {
@@ -100,7 +112,6 @@ const ComputerLendingSystem = () => {
         loadAllData();
     }, [loadBorrowedItems]);
 
-    // Auto refresh every 30 seconds
     useEffect(() => {
         const interval = setInterval(() => {
             loadBorrowedItems();
@@ -109,29 +120,30 @@ const ComputerLendingSystem = () => {
         return () => clearInterval(interval);
     }, [loadBorrowedItems]);
 
-    // Get available items
     const getAvailableItems = useCallback(() => {
         if (selectedAction === 'השאלה') {
             return items.filter(item => {
                 const status = borrowedItems[item.value];
-                return !status || status.action === 'החזרה';
+                const isAvailable = !status || status.action === 'החזרה';
+                console.log(`Item ${item.value} availability:`, isAvailable, 'Status:', status);
+                return isAvailable;
             });
         } else {
             return items.filter(item => {
                 const status = borrowedItems[item.value];
-                return status && 
-                       status.user === selectedUser && 
-                       status.action === 'השאלה';
+                const isBorrowedByUser = status && 
+                                       status.user === selectedUser && 
+                                       status.action === 'השאלה';
+                console.log(`Item ${item.value} borrowed by ${selectedUser}:`, isBorrowedByUser, 'Status:', status);
+                return isBorrowedByUser;
             });
         }
     }, [items, borrowedItems, selectedAction, selectedUser]);
 
-    // Reset selected items when user or action changes
     useEffect(() => {
         setSelectedItems([]);
     }, [selectedUser, selectedAction]);
 
-    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
         
@@ -139,20 +151,29 @@ const ComputerLendingSystem = () => {
         
         try {
             setSubmitting(true);
-            const form = new FormData();
-            form.append('entry.1927360815', selectedUser);
-            form.append('entry.1595080383', selectedAction);
-            form.append('entry.93664657', selectedClass);
-            form.append('entry.973123435', selectedItems.join(', '));
+
+            for (const item of selectedItems) {
+                const form = new FormData();
+                form.append('entry.1927360815', selectedUser);
+                form.append('entry.1595080383', selectedAction);
+                form.append('entry.93664657', selectedClass);
+                form.append('entry.973123435', item);
+                
+                console.log('Submitting form for item:', item);
+                
+                await fetch('https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse', {
+                    method: 'POST',
+                    body: form,
+                    mode: 'no-cors'
+                });
+                
+                // Wait 1 second between submissions
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
             
-            await fetch('https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse', {
-                method: 'POST',
-                body: form,
-                mode: 'no-cors'
-            });
-            
-            // Wait 30 seconds before refreshing data
+            console.log('Waiting for Google Sheets to update...');
             await new Promise(resolve => setTimeout(resolve, 30000));
+            
             await loadBorrowedItems();
             
             setSelectedItems([]);
@@ -315,7 +336,6 @@ const ComputerLendingSystem = () => {
                 )}
             </form>
             
-            {/* Status Display */}
             <div className="mt-8 max-w-lg mx-auto">
                 <div className="bg-white p-4 rounded-lg shadow">
                     <h2 className="text-lg font-medium mb-4">סטטוס נוכחי:</h2>
