@@ -482,48 +482,59 @@
         // Render the app
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<ComputerLendingSystem />);
-        const analyzeLastActions = async () => {
+        const analyzeComputerRows = async () => {
     try {
         const HISTORY_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
 
-        const historyResponse = await fetch(HISTORY_URL);
-        const historyText = await historyResponse.text();
+        const response = await fetch(HISTORY_URL);
+        const text = await response.text();
 
-        const historyResult = Papa.parse(historyText, {
+        const result = Papa.parse(text, {
             header: false,
             skipEmptyLines: true
         });
 
         // נדלג על שורת הכותרות
-        const rows = historyResult.data.slice(1);
+        const rows = result.data.slice(1);
 
-        // מפת המחשבים והשורה האחרונה שלהם
-        const lastActions = {};
+        // מיפוי של כל השורות לפי מחשב
+        const computerRows = {};
 
-        // מעבר מהסוף להתחלה
-        for (let i = rows.length - 1; i >= 0; i--) {
-            const row = rows[i];
-            const computer = row[4]?.trim();  // עמודת המחשב
-
-            // אם זה מחשב שעוד לא ראינו, נשמור את השורה שלו
-            if (computer && !lastActions[computer]) {
-                lastActions[computer] = {
+        // מעבר על כל השורות מהסוף להתחלה
+        for (const row of rows) {
+            const computer = row[4]?.trim();  // שם המחשב בעמודה E
+            
+            if (computer) {
+                if (!computerRows[computer]) {
+                    computerRows[computer] = [];
+                }
+                computerRows[computer].push({
                     date: row[0],     // תאריך
-                    user: row[1],     // שם משתמש
+                    user: row[1],     // משתמש
                     action: row[2],   // פעולה
                     class: row[3],    // כיתה
-                    computer: computer // שם המחשב
-                };
+                    row: row          // כל השורה
+                });
             }
         }
 
-        console.log("Last Action for Each Computer:");
-        console.log("==============================");
-        Object.entries(lastActions).forEach(([computer, data]) => {
-            console.log(`${computer}:`, data || "No actions found");
+        // הדפסה לקונסול
+        console.log("All Rows Per Computer:");
+        console.log("=====================");
+        
+        Object.entries(computerRows).forEach(([computer, rows]) => {
+            console.log(`\n${computer}:`);
+            console.log("-".repeat(20));
+            if (rows.length === 0) {
+                console.log("No actions found");
+            } else {
+                rows.forEach((data, index) => {
+                    console.log(`${index + 1}. ${data.date} - ${data.action} by ${data.user} (${data.class})`);
+                });
+            }
         });
 
-        return lastActions;
+        return computerRows;
 
     } catch (error) {
         console.error('Error:', error);
@@ -531,8 +542,10 @@
     }
 };
 
-// הפעלת הפונקציה
-analyzeLastActions();
+// הרצת הפונקציה
+analyzeComputerRows().then(data => {
+    console.log("\nAnalysis complete!");
+});
     </script>
 </body>
 </html>
