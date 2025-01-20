@@ -47,76 +47,93 @@
             const [isLoading, setIsLoading] = useState(true);
             const [error, setError] = useState(null);
 
+            const loadCSVData = async (url) => {
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const text = await response.text();
+                    console.log('Raw CSV data:', text.substring(0, 200)); // Log first 200 chars
+                    
+                    const result = Papa.parse(text, {
+                        header: true,
+                        skipEmptyLines: true
+                    });
+                    
+                    console.log('Parsed data:', result);
+                    
+                    if (result.errors.length > 0) {
+                        console.error('Parse errors:', result.errors);
+                    }
+                    
+                    return result.data;
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                    throw error;
+                }
+            };
+
             useEffect(() => {
-                const loadData = async () => {
+                const loadAllData = async () => {
                     try {
                         setIsLoading(true);
+                        setError(null);
+                        
+                        console.log('Starting data load...');
+                        
                         // Load users
-                        const usersResponse = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv');
-                        const usersText = await usersResponse.text();
-                        const usersData = Papa.parse(usersText, {
-                            header: true,
-                            skipEmptyLines: true
-                        });
-                        setUsers(usersData.data);
+                        const usersData = await loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv&gid=0');
+                        console.log('Users loaded:', usersData);
+                        setUsers(usersData);
 
                         // Load classes
-                        const classesResponse = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?output=csv');
-                        const classesText = await classesResponse.text();
-                        const classesData = Papa.parse(classesText, {
-                            header: true,
-                            skipEmptyLines: true
-                        });
-                        setClasses(classesData.data);
+                        const classesData = await loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?output=csv&gid=0');
+                        console.log('Classes loaded:', classesData);
+                        setClasses(classesData);
 
                         // Load items
-                        const itemsResponse = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv');
-                        const itemsText = await itemsResponse.text();
-                        const itemsData = Papa.parse(itemsText, {
-                            header: true,
-                            skipEmptyLines: true
-                        });
-                        setItems(itemsData.data);
+                        const itemsData = await loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv&gid=0');
+                        console.log('Items loaded:', itemsData);
+                        setItems(itemsData);
+
                     } catch (error) {
-                        console.error('Error loading data:', error);
-                        setError('אירעה שגיאה בטעינת הנתונים. נא לנסות שוב מאוחר יותר.');
+                        console.error('Error in loadAllData:', error);
+                        setError('אירעה שגיאה בטעינת הנתונים: ' + error.message);
                     } finally {
                         setIsLoading(false);
                     }
                 };
 
-                loadData();
+                loadAllData();
             }, []);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 
-                const baseFormData = new FormData();
-                baseFormData.append('entry.1927360815', selectedUser);
-                baseFormData.append('entry.1595080383', selectedAction);
-                baseFormData.append('entry.93664657', selectedClass);
-                
                 try {
-                    // Submit a separate form for each selected item
+                    const form = new FormData();
+                    form.append('entry.1927360815', selectedUser);
+                    form.append('entry.1595080383', selectedAction);
+                    form.append('entry.93664657', selectedClass);
+                    
                     for (const item of selectedItems) {
-                        const formData = new FormData(baseFormData);
-                        formData.append('entry.973123435', item);
+                        form.append('entry.973123435', item);
                         
                         await fetch('https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse', {
                             method: 'POST',
-                            body: formData,
+                            body: form,
                             mode: 'no-cors'
                         });
                     }
                     
-                    // Reset form
                     setSelectedItems([]);
                     setSelectedUser('');
                     setSelectedClass('');
                     alert('הטופס נשלח בהצלחה!');
                 } catch (error) {
                     console.error('Error submitting form:', error);
-                    alert('אירעה שגיאה בשליחת הטופס. נא לנסות שוב.');
+                    alert('אירעה שגיאה בשליחת הטופס: ' + error.message);
                 }
             };
 
@@ -125,12 +142,30 @@
             }
 
             if (error) {
-                return <div className="text-center p-4 text-red-500">{error}</div>;
+                return (
+                    <div className="text-center p-4">
+                        <div className="text-red-500 mb-4">{error}</div>
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="bg-blue-500 text-white px-4 py-2 rounded"
+                        >
+                            נסה שוב
+                        </button>
+                    </div>
+                );
             }
+
+            console.log('Rendering with data:', { users, classes, items });
 
             return (
                 <div className="container mx-auto p-4">
                     <h1 className="text-3xl font-bold mb-6 text-center">מערכת השאלת מחשבים</h1>
+                    
+                    <div className="mb-4 text-sm">
+                        מספר משתמשים: {users.length},
+                        מספר כיתות: {classes.length},
+                        מספר פריטים: {items.length}
+                    </div>
                     
                     <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6 bg-white p-6 rounded-lg shadow">
                         <div className="flex flex-col">
@@ -143,7 +178,9 @@
                             >
                                 <option value="">בחר משאיל</option>
                                 {users.map((user, index) => (
-                                    <option key={index} value={user.name}>{user.name}</option>
+                                    <option key={index} value={user.name || user.שם}>
+                                        {user.name || user.שם}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -158,7 +195,9 @@
                             >
                                 <option value="">בחר כיתה</option>
                                 {classes.map((cls, index) => (
-                                    <option key={index} value={cls.name}>{cls.name}</option>
+                                    <option key={index} value={cls.name || cls.כיתה}>
+                                        {cls.name || cls.כיתה}
+                                    </option>
                                 ))}
                             </select>
                         </div>
@@ -184,17 +223,18 @@
                                         <label className="flex items-center space-x-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
-                                                checked={selectedItems.includes(item.name)}
+                                                checked={selectedItems.includes(item.name || item.פריט)}
                                                 onChange={(e) => {
+                                                    const itemName = item.name || item.פריט;
                                                     if (e.target.checked) {
-                                                        setSelectedItems([...selectedItems, item.name]);
+                                                        setSelectedItems([...selectedItems, itemName]);
                                                     } else {
-                                                        setSelectedItems(selectedItems.filter(i => i !== item.name));
+                                                        setSelectedItems(selectedItems.filter(i => i !== itemName));
                                                     }
                                                 }}
                                                 className="w-4 h-4"
                                             />
-                                            <span>{item.name}</span>
+                                            <span>{item.name || item.פריט}</span>
                                         </label>
                                     </div>
                                 ))}
