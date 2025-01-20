@@ -4,20 +4,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת השאלת מחשבים</title>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
         }
         .rtl {
             direction: rtl;
+        }
+        .debug-info {
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -43,21 +48,26 @@
             try {
                 // הגדרת כתובות גוגל שיטס
                 const COMPUTERS_LIST_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv';
-                
+
                 // טעינת הנתונים מהגיליון
                 const response = await fetch(sheetUrl);
                 if (!response.ok) throw new Error('Failed to load sheet data');
                 const text = await response.text();
-                
+
                 // ניתוח הטקסט עם PapaParse
                 const result = Papa.parse(text, {
                     header: false,
                     skipEmptyLines: true
                 });
 
+                console.log('Total rows in sheet:', result.data.length);
+                console.log('Raw data sample (first 5 rows):',
+                    result.data.slice(0, 5).map(row => JSON.stringify(row))
+                );
+
                 // יצירת מפת מחשבים
                 const computers = new Map();
-                
+
                 // טעינת רשימת המחשבים המקורית
                 const computersResponse = await fetch(COMPUTERS_LIST_URL);
                 const computersText = await computersResponse.text();
@@ -72,45 +82,90 @@
                         const computerName = row[0].trim();
                         const computer = new Computer(computerName);
                         computers.set(computerName, computer);
+                        console.log(`Initialized computer: ${computerName}`);
                     }
                 });
 
-                // טיפול בשורות 
-                const rows = result.data.slice(1);
+                console.log('Initial computers count:', computers.size);
+
+                // טיפול בשורות
+                const rows = result.data.slice(1); // דילוג על שורת כותרות
+                console.log('Total rows to process:', rows.length);
+
+                // מעקב אחר סטטוס המחשבים
+                const computerStatusLog = {};
 
                 // מעבר על השורות מהסוף להתחלה
                 for (let i = rows.length - 1; i >= 0; i--) {
                     const row = rows[i];
-                    
+
                     // בדיקת אורך השורה
-                    if (!row || row.length < 5) continue;
+                    if (!row || row.length < 5) {
+                        console.log(`Skipping row ${i} - Invalid row length:`, row);
+                        continue;
+                    }
+
+                    // הדפסת השורה הגולמית לפני עיבוד
+                    console.log(`Row ${i} Data:`, JSON.stringify(row));
+
+                    // הדפסת כל העמודות עם מספריהן
+                    row.forEach((col, index) => {
+                        console.log(`Column ${index}: "${col}"`);
+                    });
 
                     // שם המחשב מעמודה E
-                    const computerName = row[4]?.trim(); 
-                    
+                    const computerName = row[4]?.trim();
+
                     // בדיקת קיום שם המחשב
-                    if (!computerName) continue;
+                    if (!computerName) {
+                        console.log(`Skipping row ${i} - No computer name`);
+                        console.log(`Raw 5th column value:`, row[4]);
+                        continue;
+                    }
 
                     // בדיקה אם המחשב קיים במערכת
                     const computer = computers.get(computerName);
-                    if (!computer) continue;
+                    if (!computer) {
+                        console.log(`Computer not found: ${computerName}`);
+                        continue;
+                    }
+
+                    // מעקב אחר שינויי סטטוס
+                    if (!computerStatusLog[computerName]) {
+                        computerStatusLog[computerName] = [];
+                    }
+                    computerStatusLog[computerName].push({
+                        rowIndex: i,
+                        date: row[0],
+                        action: row[2]?.trim(),
+                        borrowedBy: row[1]?.trim(),
+                        class: row[3]?.trim()
+                    });
 
                     // עדכון רק אם זו השורה העדכנית ביותר עבור המחשב הזה
                     if (!computer.lastUpdate || new Date(row[0]) > computer.lastUpdate) {
-                        const action = row[2]?.trim();
-                        
+                        const action = row[2]?.trim(); // עמודה C - סוג הפעולה
+
                         computer.isBorrowed = action === 'השאלה';
                         if (computer.isBorrowed) {
-                            computer.borrowedBy = row[1]?.trim();
-                            computer.class = row[3]?.trim();
+                            computer.borrowedBy = row[1]?.trim(); // עמודה B - שם המשאיל
+                            computer.class = row[3]?.trim(); // עמודה D - כיתה
                         } else {
                             computer.borrowedBy = null;
                             computer.class = null;
                         }
-                        computer.lastUpdate = new Date(row[0]);
+                        computer.lastUpdate = new Date(row[0]); // עמודה A - תאריך
+
+                        console.log(`Updated computer ${computerName}:`, {
+                            action,
+                            isBorrowed: computer.isBorrowed,
+                            borrowedBy: computer.borrowedBy,
+                            lastUpdate: computer.lastUpdate
+                        });
                     }
                 }
 
+                console.log('Final computers status:', Array.from(computers.values()));
                 return computers;
 
             } catch (error) {
@@ -118,7 +173,6 @@
                 throw error;
             }
         };
-
         // טעינת נתונים מקובץ CSV
         const loadCSVData = async (url) => {
             const response = await fetch(url);
@@ -147,20 +201,24 @@
             const [submitting, setSubmitting] = useState(false);
             const [lastRefresh, setLastRefresh] = useState(null);
             const [hasChanges, setHasChanges] = useState(false);
-            const [showComputerStatus, setShowComputerStatus] = useState(false);
 
             const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse';
             const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
 
             // רענון סטטוס המחשבים
             const refreshComputersStatus = useCallback(async () => {
-                if (hasChanges) return;
+                if (hasChanges) {
+                    console.log('Skipping refresh due to pending changes');
+                    return;
+                }
 
                 try {
+                    console.log('Refreshing computers status...');
                     const computersMap = await analyzeSheetData(RESPONSES_URL);
                     setComputers(computersMap);
                     setLastRefresh(new Date());
                 } catch (error) {
+                    console.error('Error refreshing status:', error);
                     setError('אירעה שגיאה בטעינת נתוני המחשבים');
                 }
             }, [hasChanges]);
@@ -182,6 +240,7 @@
 
                         await refreshComputersStatus();
                     } catch (error) {
+                        console.error('Error loading initial data:', error);
                         setError('אירעה שגיאה בטעינת הנתונים');
                     } finally {
                         setIsLoading(false);
@@ -191,19 +250,54 @@
                 loadAllData();
             }, [refreshComputersStatus]);
 
+            // סנכרון אוטומטי
+            useEffect(() => {
+                if (!hasChanges) {
+                    const interval = setInterval(refreshComputersStatus, 60000);
+                    return () => clearInterval(interval);
+                }
+            }, [refreshComputersStatus, hasChanges]);
+
             // קבלת מחשבים זמינים
             const getAvailableComputers = useCallback(() => {
                 const computersList = Array.from(computers.values());
-                
+                console.log('Current computers list:', computersList);
+
                 if (selectedAction === 'השאלה') {
-                    return computersList.filter(computer => !computer.isBorrowed);
+                    // מציג רק מחשבים שלא מושאלים
+                    const availableComputers = computersList.filter(computer => {
+                        const isAvailable = !computer.isBorrowed;
+                        console.log(`Computer ${computer.name}:`, {
+                            isBorrowed: computer.isBorrowed,
+                            isAvailable,
+                            borrowedBy: computer.borrowedBy
+                        });
+                        return isAvailable;
+                    });
+                    console.log('Available computers:', availableComputers);
+                    return availableComputers;
                 } else {
-                    return computersList.filter(computer => 
-                        computer.isBorrowed && computer.borrowedBy === selectedUser
-                    );
+                    // מציג רק מחשבים שמושאלים למשתמש הנבחר
+                    const borrowedComputers = computersList.filter(computer => {
+                        const isBorrowedByUser = computer.isBorrowed && computer.borrowedBy === selectedUser;
+                        console.log(`Computer ${computer.name}:`, {
+                            isBorrowed: computer.isBorrowed,
+                            borrowedBy: computer.borrowedBy,
+                            selectedUser,
+                            isBorrowedByUser
+                        });
+                        return isBorrowedByUser;
+                    });
+                    console.log('Computers borrowed by user:', borrowedComputers);
+                    return borrowedComputers;
                 }
             }, [computers, selectedAction, selectedUser]);
 
+            // אתחול בחירות בשינוי משתמש או פעולה
+            useEffect(() => {
+                setSelectedComputers([]);
+                setHasChanges(false);
+            }, [selectedUser, selectedAction]);
             // שליחת טופס
             const handleSubmit = async (e) => {
                 e.preventDefault();
@@ -226,9 +320,11 @@
                             mode: 'no-cors'
                         });
 
+                        // המתנה בין שליחות
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     }
 
+                    // המתנה לעדכון הגיליון
                     await new Promise(resolve => setTimeout(resolve, 30000));
                     await refreshComputersStatus();
 
@@ -236,57 +332,12 @@
                     setHasChanges(false);
                     alert('הפעולה הושלמה בהצלחה!');
                 } catch (error) {
+                    console.error('Error submitting form:', error);
                     alert('אירעה שגיאה בשליחת הטופס');
                 } finally {
                     setSubmitting(false);
                 }
             };
-
-            // מודל סטטוס מחשבים
-            const ComputerStatusModal = () => (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-2xl font-bold">סטטוס מחשבים</h2>
-                            <button 
-                                onClick={() => setShowComputerStatus(false)}
-                                className="text-red-500 hover:text-red-700"
-                            >
-                                סגור
-                            </button>
-                        </div>
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-200">
-                                    <th className="p-2">שם מחשב</th>
-                                    <th className="p-2">סטטוס</th>
-                                    <th className="p-2">מושאל ל</th>
-                                    <th className="p-2">כיתה</th>
-                                    <th className="p-2">עדכון אחרון</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {Array.from(computers.values()).map(computer => (
-                                    <tr 
-                                        key={computer.name} 
-                                        className={computer.isBorrowed ? "bg-red-100" : "bg-green-100"}
-                                    >
-                                        <td className="p-2 text-center">{computer.name}</td>
-                                        <td className="p-2 text-center">
-                                            {computer.isBorrowed ? 'מושאל' : 'זמין'}
-                                        </td>
-                                        <td className="p-2 text-center">{computer.borrowedBy || '-'}</td>
-                                        <td className="p-2 text-center">{computer.class || '-'}</td>
-                                        <td className="p-2 text-center">
-                                            {computer.lastUpdate ? computer.lastUpdate.toLocaleString() : '-'}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            );
 
             if (isLoading) {
                 return (
@@ -303,8 +354,8 @@
                 return (
                     <div className="text-center p-4">
                         <div className="text-red-500 mb-4">{error}</div>
-                        <button 
-                            onClick={() => window.location.reload()} 
+                        <button
+                            onClick={() => window.location.reload()}
                             className="bg-blue-500 text-white px-4 py-2 rounded"
                         >
                             נסה שוב
@@ -317,37 +368,26 @@
 
             return (
                 <div className="container mx-auto p-4">
-                    {showComputerStatus && <ComputerStatusModal />}
-                    
                     <h1 className="text-3xl font-bold mb-6 text-center">מערכת השאלת מחשבים</h1>
-                    
+
                     <div className="flex justify-between items-center mb-4">
                         {lastRefresh && (
                             <div className="text-sm text-gray-500">
-                                עודכן לאחרונה: {lastRefresh.toLocaleTimeString()}
+                                עודכן לאחרונה: {new Date(lastRefresh).toLocaleTimeString()}
                             </div>
                         )}
-                        <div className="flex space-x-2">
-                            <button
-                                onClick={refreshComputersStatus}
-                                disabled={hasChanges || submitting}
-                                className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
-                            >
-                                רענן נתונים
-                            </button>
-                            <button
-                                onClick={() => setShowComputerStatus(true)}
-                                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
-                            >
-                                סטטוס מחשבים
-                            </button>
-                        </div>
+                        <button
+                            onClick={refreshComputersStatus}
+                            disabled={hasChanges || submitting}
+                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                        >רענן נתונים
+                        </button>
                     </div>
-                    
+
                     <form onSubmit={handleSubmit} onChange={() => setHasChanges(true)} className="max-w-lg mx-auto space-y-6 bg-white p-6 rounded-lg shadow">
                         <div className="flex flex-col">
                             <label className="mb-2 font-medium">שם המשאיל:</label>
-                            <select 
+                            <select
                                 value={selectedUser}
                                 onChange={(e) => setSelectedUser(e.target.value)}
                                 className="p-2 border rounded focus:border-blue-500 focus:outline-none"
@@ -364,7 +404,7 @@
 
                         <div className="flex flex-col">
                             <label className="mb-2 font-medium">כיתה:</label>
-                            <select 
+                            <select
                                 value={selectedClass}
                                 onChange={(e) => setSelectedClass(e.target.value)}
                                 className="p-2 border rounded focus:border-blue-500 focus:outline-none"
@@ -381,7 +421,7 @@
 
                         <div className="flex flex-col">
                             <label className="mb-2 font-medium">פעולה:</label>
-                            <select 
+                            <select
                                 value={selectedAction}
                                 onChange={(e) => setSelectedAction(e.target.value)}
                                 className="p-2 border rounded focus:border-blue-500 focus:outline-none"
@@ -399,9 +439,9 @@
                             <div className="space-y-2 border rounded p-4 max-h-48 overflow-y-auto">
                                 {availableComputers.length === 0 ? (
                                     <div className="text-center text-gray-500">
-                                        {selectedAction === 'השאלה' ? 
-                                            'אין מחשבים זמינים להשאלה' : 
-                                            selectedUser ? 
+                                        {selectedAction === 'השאלה' ?
+                                            'אין מחשבים זמינים להשאלה' :
+                                            selectedUser ?
                                                 'אין מחשבים מושאלים למשתמש זה' :
                                                 'בחר משתמש כדי לראות את המחשבים המושאלים'
                                         }
@@ -438,8 +478,8 @@
                             )}
                         </div>
 
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-200 disabled:bg-gray-400"
                             disabled={selectedComputers.length === 0 || submitting}
                         >
@@ -459,6 +499,24 @@
                             </div>
                         )}
                     </form>
+
+                    <div className="mt-8 max-w-lg mx-auto">
+                        <div className="bg-white p-4 rounded-lg shadow">
+                            <h2 className="text-lg font-medium mb-4">סטטוס נוכחי:</h2>
+                            <div className="text-sm text-gray-600 space-y-2">
+                                <div>מחשבים זמינים: {Array.from(computers.values()).filter(c => !c.isBorrowed).length}</div>
+                                <div>מחשבים מושאלים: {Array.from(computers.values()).filter(c => c.isBorrowed).length}</div>
+                                {selectedUser && (
+                                    <div>מחשבים מושאלים למשתמש: {
+                                        Array.from(computers.values())
+                                            .filter(c => c.isBorrowed && c.borrowedBy === selectedUser).length
+                                    }</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                  
                 </div>
             );
         };
