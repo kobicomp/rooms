@@ -5,29 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת השאלת מחשבים</title>
     
-    <!-- React and ReactDOM -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    
-    <!-- Babel for JSX -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
-    
-    <!-- PapaParse for CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    
-    <!-- Lodash -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
-    
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-        }
-        .rtl {
-            direction: rtl;
-        }
+        body { font-family: system-ui, -apple-system, sans-serif; }
+        .rtl { direction: rtl; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -36,7 +23,40 @@
     <script type="text/babel">
         const { useState, useEffect, useCallback } = React;
 
-        // Function to analyze Google Sheet data and get current item status
+        // Debug Utility Function
+        const logData = (label, data) => {
+            console.log(`=== ${label} ===`);
+            console.log(data);
+            console.log('='.repeat(20));
+        };
+
+        const loadCSVData = async (url) => {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const text = await response.text();
+                logData('Raw CSV Text', text.substring(0, 500));
+                
+                const result = Papa.parse(text, {
+                    header: false,
+                    skipEmptyLines: 'greedy',
+                    transform: (value) => value.trim()
+                });
+                
+                const data = result.data
+                    .filter(row => row[0] && row[0].trim().length > 0)
+                    .map(row => ({
+                        value: row[0].trim()
+                    }));
+
+                logData('Parsed CSV Data', data);
+                return data;
+            } catch (error) {
+                console.error('Error in loadCSVData:', error);
+                throw error;
+            }
+        };
+
         const analyzeSheetData = async (sheetUrl) => {
             try {
                 const response = await fetch(sheetUrl);
@@ -45,51 +65,49 @@
                 
                 const result = Papa.parse(text, {
                     header: true,
-                    skipEmptyLines: true
+                    skipEmptyLines: 'greedy',
+                    transform: (value) => value.trim()
                 });
 
-                console.log('Raw Sheet Data:', result.data);
+                logData('Form Responses Raw Data', result.data);
 
-                // Create a map for each item's status
-                const itemStatusMap = new Map();
-
-                // Sort data by date (newest first) and process
-                const sortedData = result.data
-                    .filter(row => row['שם'] && row['פריט'] && row['פעולה'] && row['תאריך'])
-                    .map(row => ({
-                        ...row,
-                        timestamp: new Date(row['תאריך'])
-                    }))
-                    .sort((a, b) => b.timestamp - a.timestamp);
-
-                // Process rows to find latest status for each item
-                sortedData.forEach(row => {
-                    const item = row['פריט'].trim();
-                    if (!itemStatusMap.has(item)) {
-                        itemStatusMap.set(item, {
-                            user: row['שם'].trim(),
-                            action: row['פעולה'].trim(),
-                            timestamp: row.timestamp,
-                            isBorrowed: row['פעולה'].trim() === 'השאלה'
-                        });
+                // Create a map of each item's history
+                const itemHistory = {};
+                result.data.forEach(row => {
+                    if (!row['פריט'] || !row['שם'] || !row['פעולה'] || !row['תאריך']) return;
+                    
+                    const itemName = row['פריט'].trim();
+                    if (!itemHistory[itemName]) {
+                        itemHistory[itemName] = [];
                     }
+                    
+                    itemHistory[itemName].push({
+                        user: row['שם'].trim(),
+                        action: row['פעולה'].trim(),
+                        timestamp: new Date(row['תאריך']),
+                        raw: row
+                    });
                 });
 
-                // Convert map to array for easier use
-                const itemStatus = Array.from(itemStatusMap.entries()).map(([item, status]) => ({
-                    item,
-                    ...status
-                }));
-
-                // Debug logging
-                console.log('\nCurrent Items Status:');
-                itemStatus.forEach(item => {
-                    console.log(`${item.item}: ${item.isBorrowed ? 'מושאל ל-' + item.user : 'זמין'} (${item.timestamp.toLocaleString()})`);
+                // Sort each item's history and get latest status
+                const itemStatus = {};
+                Object.entries(itemHistory).forEach(([item, history]) => {
+                    // Sort by date descending
+                    history.sort((a, b) => b.timestamp - a.timestamp);
+                    // Get latest status
+                    const latest = history[0];
+                    itemStatus[item] = {
+                        user: latest.user,
+                        action: latest.action,
+                        timestamp: latest.timestamp,
+                        isBorrowed: latest.action === 'השאלה'
+                    };
                 });
 
+                logData('Final Item Status', itemStatus);
                 return itemStatus;
             } catch (error) {
-                console.error('Error analyzing sheet:', error);
+                console.error('Error in analyzeSheetData:', error);
                 throw error;
             }
         };
@@ -98,7 +116,7 @@
             const [users, setUsers] = useState([]);
             const [classes, setClasses] = useState([]);
             const [items, setItems] = useState([]);
-            const [itemsStatus, setItemsStatus] = useState([]);
+            const [itemsStatus, setItemsStatus] = useState({});
             const [selectedUser, setSelectedUser] = useState('');
             const [selectedClass, setSelectedClass] = useState('');
             const [selectedAction, setSelectedAction] = useState('השאלה');
@@ -108,33 +126,11 @@
             const [submitting, setSubmitting] = useState(false);
             const [lastRefresh, setLastRefresh] = useState(null);
 
-            const RESPONSES_SHEET = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
-
-            const loadCSVData = async (url) => {
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const text = await response.text();
-                    
-                    const result = Papa.parse(text, {
-                        header: false,
-                        skipEmptyLines: true
-                    });
-                    
-                    return result.data
-                        .filter(row => row[0])
-                        .map(row => ({
-                            value: row[0].trim()
-                        }));
-                } catch (error) {
-                    console.error('Error fetching data:', error);
-                    throw error;
-                }
-            };
+            const FORM_RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
 
             const loadItemsStatus = useCallback(async () => {
                 try {
-                    const status = await analyzeSheetData(RESPONSES_SHEET);
+                    const status = await analyzeSheetData(FORM_RESPONSES_URL);
                     setItemsStatus(status);
                     setLastRefresh(new Date());
                 } catch (error) {
@@ -155,6 +151,10 @@
                             loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv')
                         ]);
 
+                        logData('Loaded Users', usersData);
+                        logData('Loaded Classes', classesData);
+                        logData('Loaded Items', itemsData);
+
                         setUsers(usersData);
                         setClasses(classesData);
                         setItems(itemsData);
@@ -171,55 +171,54 @@
                 loadAllData();
             }, [loadItemsStatus]);
 
+            // Auto refresh status every 30 seconds
             useEffect(() => {
-                const interval = setInterval(() => {
-                    loadItemsStatus();
-                }, 30000);
-                
+                const interval = setInterval(loadItemsStatus, 30000);
                 return () => clearInterval(interval);
             }, [loadItemsStatus]);
 
             const getAvailableItems = useCallback(() => {
                 if (selectedAction === 'השאלה') {
                     // Show only available items
-                    return items.filter(item => 
-                        !itemsStatus.find(status => 
-                            status.item === item.value && status.isBorrowed
-                        )
-                    );
+                    return items.filter(item => {
+                        const status = itemsStatus[item.value];
+                        const isAvailable = !status || !status.isBorrowed;
+                        logData(`Item ${item.value} availability`, { status, isAvailable });
+                        return isAvailable;
+                    });
                 } else {
                     // Show only items borrowed by selected user
-                    return items.filter(item => 
-                        itemsStatus.find(status => 
-                            status.item === item.value && 
-                            status.isBorrowed && 
-                            status.user === selectedUser
-                        )
-                    );
+                    return items.filter(item => {
+                        const status = itemsStatus[item.value];
+                        const isBorrowedByUser = status && 
+                                               status.isBorrowed && 
+                                               status.user === selectedUser;
+                        logData(`Item ${item.value} borrowed status`, { status, isBorrowedByUser });
+                        return isBorrowedByUser;
+                    });
                 }
             }, [items, itemsStatus, selectedAction, selectedUser]);
 
+            // Reset selections when user or action changes
             useEffect(() => {
                 setSelectedItems([]);
             }, [selectedUser, selectedAction]);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
-                
                 if (submitting) return;
                 
                 try {
                     setSubmitting(true);
 
-                    // Submit each item separately
                     for (const item of selectedItems) {
                         const form = new FormData();
                         form.append('entry.1927360815', selectedUser);
                         form.append('entry.1595080383', selectedAction);
                         form.append('entry.93664657', selectedClass);
                         form.append('entry.973123435', item);
-
-                        console.log(`Submitting ${selectedAction} for item: ${item}`);
+                        
+                        logData('Submitting form for item', { item, user: selectedUser, action: selectedAction });
                         
                         await fetch('https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse', {
                             method: 'POST',
@@ -232,9 +231,7 @@
                     }
                     
                     // Wait for Google Sheets to update
-                    console.log('Waiting for Google Sheets to update...');
                     await new Promise(resolve => setTimeout(resolve, 30000));
-                    
                     await loadItemsStatus();
                     
                     setSelectedItems([]);
@@ -335,12 +332,12 @@
                         </div>
 
                         <div className="flex flex-col">
-                            <label className="mb-2 font-medium">פריטים:</label>
+                           <label className="mb-2 font-medium">פריטים:</label>
                             <div className="space-y-2 border rounded p-4 max-h-48 overflow-y-auto">
                                 {availableItems.length === 0 ? (
                                     <div className="text-center text-gray-500">
                                         {selectedAction === 'השאלה' ? 
-                                           'אין פריטים זמינים להשאלה' : 
+                                            'אין פריטים זמינים להשאלה' : 
                                             selectedUser ? 
                                                 'אין פריטים מושאלים למשתמש זה' :
                                                 'בחר משתמש כדי לראות את הפריטים המושאלים'
@@ -400,13 +397,17 @@
                     <div className="mt-8 max-w-lg mx-auto">
                         <div className="bg-white p-4 rounded-lg shadow">
                             <h2 className="text-lg font-medium mb-4">סטטוס נוכחי:</h2>
-                            <div className="text-sm space-y-2">
-                                <div>פריטים זמינים: {items.filter(item => 
-                                    !itemsStatus.find(status => 
-                                        status.item === item.value && status.isBorrowed
-                                    )
-                                ).length}</div>
-                                <div>פריטים מושאלים: {itemsStatus.filter(status => status.isBorrowed).length}</div>
+                            <div className="text-sm text-gray-600 space-y-2">
+                                <div>פריטים זמינים: {items.filter(item => {
+                                    const status = itemsStatus[item.value];
+                                    return !status || !status.isBorrowed;
+                                }).length}</div>
+                                <div>פריטים מושאלים: {Object.values(itemsStatus).filter(status => status.isBorrowed).length}</div>
+                                {selectedUser && (
+                                    <div>פריטים מושאלים למשתמש: {Object.values(itemsStatus)
+                                        .filter(status => status.isBorrowed && status.user === selectedUser).length}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
