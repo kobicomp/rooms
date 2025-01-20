@@ -3,64 +3,539 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>קריאת נתוני Google Sheets</title>
+    <title>מערכת השאלת מחשבים</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .rtl {
+            direction: rtl;
+        }
+        .debug-info {
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+    </style>
 </head>
-<body>
-    <h1>נתוני Google Sheets</h1>
-    <pre id="output"></pre>
+<body class="bg-gray-50">
+    <div id="root"></div>
 
-    <script>
-        // כתובת Google Sheets המעודכנת
-        const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
-
-        // פונקציה לטעינת הנתונים
-        async function loadSheetData() {
-            try {
-                // טעינת הנתונים
-                const response = await fetch(SHEET_URL);
-                
-                // בדיקה אם הטעינה הצליחה
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                // קבלת הטקסט
-                const text = await response.text();
-
-                // ניתוח CSV עם PapaParse
-                const result = Papa.parse(text, {
-                    header: false,  // ללא כותרות כדי לראות את כל הנתונים
-                    skipEmptyLines: true
-                });
-
-                // הצגת הנתונים
-                const outputElement = document.getElementById('output');
-                
-                // הדפסת כל השורות
-                outputElement.textContent += "נתונים:\n";
-                result.data.forEach((row, index) => {
-                    outputElement.textContent += `שורה ${index + 1}:\n`;
-                    outputElement.textContent += JSON.stringify(row, null, 2) + "\n\n";
-                });
-
-                // הדפסת מספר השורות
-                outputElement.textContent += `סה"כ שורות: ${result.data.length}`;
-
-                // הדפסת אורך כל שורה
-                outputElement.textContent += "\n\nאורך השורות:\n";
-                result.data.forEach((row, index) => {
-                    outputElement.textContent += `שורה ${index + 1}: אורך ${row.length} עמודות\n`;
-                });
-
-            } catch (error) {
-                console.error('שגיאה בטעינת הנתונים:', error);
-                document.getElementById('output').textContent = `שגיאה: ${error.message}`;
+    <script type="text/babel">
+        // מבנה נתונים למחשב
+        class Computer {
+            constructor(name) {
+                this.name = name;
+                this.isBorrowed = false;
+                this.borrowedBy = null;
+                this.class = null;
+                this.lastUpdate = null;
             }
         }
 
-        // הרצת הפונקציה
-        loadSheetData();
+        const { useState, useEffect, useCallback } = React;
+
+        // טעינה וניתוח נתוני מחשבים
+        const analyzeSheetData = async (sheetUrl) => {
+            try {
+                // הגדרת כתובות גוגל שיטס
+                const COMPUTERS_LIST_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv';
+                
+                // טעינת הנתונים מהגיליון
+                const response = await fetch(sheetUrl);
+                if (!response.ok) throw new Error('Failed to load sheet data');
+                const text = await response.text();
+                
+                // ניתוח הטקסט עם PapaParse
+                const result = Papa.parse(text, {
+                    header: false,
+                    skipEmptyLines: true
+                });
+
+                console.log('Total rows in sheet:', result.data.length);
+                console.log('Raw data sample (first 5 rows):', 
+                    result.data.slice(0, 5).map(row => JSON.stringify(row))
+                );
+
+                // יצירת מפת מחשבים
+                const computers = new Map();
+                
+                // טעינת רשימת המחשבים המקורית
+                const computersResponse = await fetch(COMPUTERS_LIST_URL);
+                const computersText = await computersResponse.text();
+                const computersResult = Papa.parse(computersText, {
+                    header: false,
+                    skipEmptyLines: true
+                });
+
+                // יצירת מופעי מחשב
+                computersResult.data.forEach(row => {
+                    if (row[0]) {
+                        const computerName = row[0].trim();
+                        const computer = new Computer(computerName);
+                        computers.set(computerName, computer);
+                        console.log(`Initialized computer: ${computerName}`);
+                    }
+                });
+
+                console.log('Initial computers count:', computers.size);
+
+                // טיפול בשורות 
+                const rows = result.data.slice(1); // דילוג על שורת כותרות
+                console.log('Total rows to process:', rows.length);
+
+                // מעקב אחר סטטוס המחשבים
+                const computerStatusLog = {};
+
+                // מעבר על השורות מהסוף להתחלה
+                for (let i = rows.length - 1; i >= 0; i--) {
+                    const row = rows[i];
+                    
+                    // בדיקת אורך השורה
+                    if (!row || row.length < 5) {
+                        console.log(`Skipping row ${i} - Invalid row length:`, row);
+                        continue;
+                    }
+
+                    // הדפסת השורה הגולמית לפני עיבוד
+                    console.log(`Row ${i} Data:`, JSON.stringify(row));
+
+                    // הדפסת כל העמודות עם מספריהן
+                    row.forEach((col, index) => {
+                        console.log(`Column ${index}: "${col}"`);
+                    });
+
+                    // שם המחשב מעמודה E
+                    const computerName = row[4]?.trim(); 
+                    
+                    // בדיקת קיום שם המחשב
+                    if (!computerName) {
+                        console.log(`Skipping row ${i} - No computer name`);
+                        console.log(`Raw 5th column value:`, row[4]);
+                        continue;
+                    }
+
+                    // בדיקה אם המחשב קיים במערכת
+                    const computer = computers.get(computerName);
+                    if (!computer) {
+                        console.log(`Computer not found: ${computerName}`);
+                        continue;
+                    }
+
+                    // מעקב אחר שינויי סטטוס
+                    if (!computerStatusLog[computerName]) {
+                        computerStatusLog[computerName] = [];
+                    }
+                    computerStatusLog[computerName].push({
+                        rowIndex: i,
+                        date: row[0],
+                        action: row[2]?.trim(),
+                        borrowedBy: row[1]?.trim(),
+                        class: row[3]?.trim()
+                    });
+
+                    // עדכון רק אם זו השורה העדכנית ביותר עבור המחשב הזה
+                    if (!computer.lastUpdate || new Date(row[0]) > computer.lastUpdate) {
+                        const action = row[2]?.trim(); // עמודה C - סוג הפעולה
+                        
+                        computer.isBorrowed = action === 'השאלה';
+                        if (computer.isBorrowed) {
+                            computer.borrowedBy = row[1]?.trim(); // עמודה B - שם המשאיל
+                            computer.class = row[3]?.trim(); // עמודה D - כיתה
+                        } else {
+                            computer.borrowedBy = null;
+                            computer.class = null;
+                        }
+                        computer.lastUpdate = new Date(row[0]); // עמודה A - תאריך
+
+                        console.log(`Updated computer ${computerName}:`, {
+                            action,
+                            isBorrowed: computer.isBorrowed,
+                            borrowedBy: computer.borrowedBy,
+                            lastUpdate: computer.lastUpdate
+                        });
+                    }
+                }
+
+                console.log('Final computers status:', Array.from(computers.values()));
+                return computers;
+
+            } catch (error) {
+                console.error('Error analyzing sheet:', error);
+                throw error;
+            }
+        };
+        // טעינת נתונים מקובץ CSV
+        const loadCSVData = async (url) => {
+            const response = await fetch(url);
+            const text = await response.text();
+            const result = Papa.parse(text, {
+                header: false,
+                skipEmptyLines: true
+            });
+            return result.data
+                .filter(row => row[0])
+                .map(row => ({
+                    value: row[0].trim()
+                }));
+        };
+
+        const ComputerLendingSystem = () => {
+            const [users, setUsers] = useState([]);
+            const [classes, setClasses] = useState([]);
+            const [computers, setComputers] = useState(new Map());
+            const [selectedUser, setSelectedUser] = useState('');
+            const [selectedClass, setSelectedClass] = useState('');
+            const [selectedAction, setSelectedAction] = useState('השאלה');
+            const [selectedComputers, setSelectedComputers] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [error, setError] = useState(null);
+            const [submitting, setSubmitting] = useState(false);
+            const [lastRefresh, setLastRefresh] = useState(null);
+            const [hasChanges, setHasChanges] = useState(false);
+
+            const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse';
+            const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
+
+            // רענון סטטוס המחשבים
+            const refreshComputersStatus = useCallback(async () => {
+                if (hasChanges) {
+                    console.log('Skipping refresh due to pending changes');
+                    return;
+                }
+
+                try {
+                    console.log('Refreshing computers status...');
+                    const computersMap = await analyzeSheetData(RESPONSES_URL);
+                    setComputers(computersMap);
+                    setLastRefresh(new Date());
+                } catch (error) {
+                    console.error('Error refreshing status:', error);
+                    setError('אירעה שגיאה בטעינת נתוני המחשבים');
+                }
+            }, [hasChanges]);
+
+            // טעינת נתונים ראשונית
+            useEffect(() => {
+                const loadAllData = async () => {
+                    try {
+                        setIsLoading(true);
+                        setError(null);
+
+                        const [usersData, classesData] = await Promise.all([
+                            loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv'),
+                            loadCSVData('https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?output=csv')
+                        ]);
+
+                        setUsers(usersData);
+                        setClasses(classesData);
+
+                        await refreshComputersStatus();
+                    } catch (error) {
+                        console.error('Error loading initial data:', error);
+                        setError('אירעה שגיאה בטעינת הנתונים');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+
+                loadAllData();
+            }, [refreshComputersStatus]);
+
+            // סנכרון אוטומטי
+            useEffect(() => {
+                if (!hasChanges) {
+                    const interval = setInterval(refreshComputersStatus, 60000);
+                    return () => clearInterval(interval);
+                }
+            }, [refreshComputersStatus, hasChanges]);
+
+            // קבלת מחשבים זמינים
+            const getAvailableComputers = useCallback(() => {
+                const computersList = Array.from(computers.values());
+                console.log('Current computers list:', computersList);
+                
+                if (selectedAction === 'השאלה') {
+                    // מציג רק מחשבים שלא מושאלים
+                    const availableComputers = computersList.filter(computer => {
+                        const isAvailable = !computer.isBorrowed;
+                        console.log(`Computer ${computer.name}:`, {
+                            isBorrowed: computer.isBorrowed,
+                            isAvailable,
+                            borrowedBy: computer.borrowedBy
+                        });
+                        return isAvailable;
+                    });
+                    console.log('Available computers:', availableComputers);
+                    return availableComputers;
+                } else {
+                    // מציג רק מחשבים שמושאלים למשתמש הנבחר
+                    const borrowedComputers = computersList.filter(computer => {
+                        const isBorrowedByUser = computer.isBorrowed && computer.borrowedBy === selectedUser;
+                        console.log(`Computer ${computer.name}:`, {
+                            isBorrowed: computer.isBorrowed,
+                            borrowedBy: computer.borrowedBy,
+                            selectedUser,
+                            isBorrowedByUser
+                        });
+                        return isBorrowedByUser;
+                    });
+                    console.log('Computers borrowed by user:', borrowedComputers);
+                    return borrowedComputers;
+                }
+            }, [computers, selectedAction, selectedUser]);
+
+            // אתחול בחירות בשינוי משתמש או פעולה
+            useEffect(() => {
+                setSelectedComputers([]);
+                setHasChanges(false);
+            }, [selectedUser, selectedAction]);
+            // שליחת טופס
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (submitting || selectedComputers.length === 0) return;
+
+                try {
+                    setSubmitting(true);
+
+                    // שליחת טופס לכל מחשב
+                    for (const computerName of selectedComputers) {
+                        const form = new FormData();
+                        form.append('entry.1927360815', selectedUser);
+                        form.append('entry.1595080383', selectedAction);
+                        form.append('entry.93664657', selectedClass);
+                        form.append('entry.973123435', computerName);
+
+                        await fetch(FORM_URL, {
+                            method: 'POST',
+                            body: form,
+                            mode: 'no-cors'
+                        });
+
+                        // המתנה בין שליחות
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+
+                    // המתנה לעדכון הגיליון
+                    await new Promise(resolve => setTimeout(resolve, 30000));
+                    await refreshComputersStatus();
+
+                    setSelectedComputers([]);
+                    setHasChanges(false);
+                    alert('הפעולה הושלמה בהצלחה!');
+                } catch (error) {
+                    console.error('Error submitting form:', error);
+                    alert('אירעה שגיאה בשליחת הטופס');
+                } finally {
+                    setSubmitting(false);
+                }
+            };
+
+            if (isLoading) {
+                return (
+                    <div className="flex justify-center items-center h-screen">
+                        <div className="text-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                            <div>טוען נתונים...</div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="text-center p-4">
+                        <div className="text-red-500 mb-4">{error}</div>
+                        <button 
+                            onClick={() => window.location.reload()} 
+                            className="bg-blue-500 text-white px-4 py-2 rounded"
+                        >
+                            נסה שוב
+                        </button>
+                    </div>
+                );
+            }
+
+            const availableComputers = getAvailableComputers();
+
+            return (
+                <div className="container mx-auto p-4">
+                    <h1 className="text-3xl font-bold mb-6 text-center">מערכת השאלת מחשבים</h1>
+                    
+                    <div className="flex justify-between items-center mb-4">
+                        {lastRefresh && (
+                            <div className="text-sm text-gray-500">
+                                עודכן לאחרונה: {new Date(lastRefresh).toLocaleTimeString()}
+                            </div>
+                        )}
+                        <button
+                            onClick={refreshComputersStatus}
+                            disabled={hasChanges || submitting}
+                            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                        >רענן נתונים
+                        </button>
+                    </div>
+                    
+                    <form onSubmit={handleSubmit} onChange={() => setHasChanges(true)} className="max-w-lg mx-auto space-y-6 bg-white p-6 rounded-lg shadow">
+                        <div className="flex flex-col">
+                            <label className="mb-2 font-medium">שם המשאיל:</label>
+                            <select 
+                                value={selectedUser}
+                                onChange={(e) => setSelectedUser(e.target.value)}
+                                className="p-2 border rounded focus:border-blue-500 focus:outline-none"
+                                required
+                            >
+                                <option value="">בחר משאיל</option>
+                                {users.map((user, index) => (
+                                    <option key={index} value={user.value}>
+                                        {user.value}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <label className="mb-2 font-medium">כיתה:</label>
+                            <select 
+                                value={selectedClass}
+                                onChange={(e) => setSelectedClass(e.target.value)}
+                                className="p-2 border rounded focus:border-blue-500 focus:outline-none"
+                                required
+                            >
+                                <option value="">בחר כיתה</option>
+                                {classes.map((cls, index) => (
+                                    <option key={index} value={cls.value}>
+                                        {cls.value}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <label className="mb-2 font-medium">פעולה:</label>
+                            <select 
+                                value={selectedAction}
+                                onChange={(e) => setSelectedAction(e.target.value)}
+                                className="p-2 border rounded focus:border-blue-500 focus:outline-none"
+                                required
+                            >
+                                <option value="השאלה">השאלה</option>
+                                <option value="החזרה">החזרה</option>
+                            </select>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <label className="mb-2 font-medium">
+                                {selectedAction === 'השאלה' ? 'מחשבים זמינים:' : 'מחשבים להחזרה:'}
+                            </label>
+                            <div className="space-y-2 border rounded p-4 max-h-48 overflow-y-auto">
+                                {availableComputers.length === 0 ? (
+                                    <div className="text-center text-gray-500">
+                                        {selectedAction === 'השאלה' ? 
+                                            'אין מחשבים זמינים להשאלה' : 
+                                            selectedUser ? 
+                                                'אין מחשבים מושאלים למשתמש זה' :
+                                                'בחר משתמש כדי לראות את המחשבים המושאלים'
+                                        }
+                                    </div>
+                                ) : (
+                                    availableComputers.map((computer, index) => (
+                                        <div key={index} className="flex items-center justify-end">
+                                            <label className="flex items-center space-x-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedComputers.includes(computer.name)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedComputers([...selectedComputers, computer.name]);
+                                                        } else {
+                                                            setSelectedComputers(
+                                                                selectedComputers.filter(name => name !== computer.name)
+                                                            );
+                                                        }
+                                                        setHasChanges(true);
+                                                    }}
+                                                    className="w-4 h-4 ml-2"
+                                                />
+                                                <span>{computer.name}</span>
+                                            </label>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            {selectedComputers.length > 0 && (
+                                <div className="mt-2 text-sm text-gray-600">
+                                    נבחרו {selectedComputers.length} מחשבים
+                                </div>
+                            )}
+                        </div>
+
+                        <button 
+                            type="submit" 
+                            className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-200 disabled:bg-gray-400"
+                            disabled={selectedComputers.length === 0 || submitting}
+                        >
+                            {submitting ? (
+                                <div className="flex items-center justify-center">
+                                    <span className="mr-2">מעבד את הבקשה...</span>
+                                    <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent"></div>
+                                </div>
+                            ) : (
+                                'שלח טופס'
+                            )}
+                        </button>
+
+                        {submitting && (
+                            <div className="text-sm text-gray-500 text-center mt-2">
+                                הנתונים מתעדכנים, אנא המתן...
+                            </div>
+                        )}
+                    </form>
+                    
+                    <div className="mt-8 max-w-lg mx-auto">
+                        <div className="bg-white p-4 rounded-lg shadow">
+                            <h2 className="text-lg font-medium mb-4">סטטוס נוכחי:</h2>
+                            <div className="text-sm text-gray-600 space-y-2">
+                                <div>מחשבים זמינים: {Array.from(computers.values()).filter(c => !c.isBorrowed).length}</div>
+                                <div>מחשבים מושאלים: {Array.from(computers.values()).filter(c => c.isBorrowed).length}</div>
+                                {selectedUser && (
+                                    <div>מחשבים מושאלים למשתמש: {
+                                        Array.from(computers.values())
+                                            .filter(c => c.isBorrowed && c.borrowedBy === selectedUser).length
+                                    }</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 p-4 bg-gray-100 rounded text-right">
+                        <h3 className="font-bold mb-2">מידע דיבאג:</h3>
+                        <div className="text-xs space-y-1">
+                            {Array.from(computers.values()).map(computer => (
+                                <div key={computer.name} className="p-1">
+                                    {computer.name}: {computer.isBorrowed ? 
+                                        `מושאל ל${computer.borrowedBy}` : 
+                                        'פנוי'
+                                    }
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ComputerLendingSystem />);
     </script>
 </body>
 </html>
