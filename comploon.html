@@ -482,59 +482,49 @@
         // Render the app
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<ComputerLendingSystem />);
-        const analyzeComputerStatus = async () => {
+        const analyzeLastActions = async () => {
     try {
-        // URL של הגיליון עם היסטוריית ההשאלות
         const HISTORY_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
 
-        // קריאת היסטוריית ההשאלות
         const historyResponse = await fetch(HISTORY_URL);
         const historyText = await historyResponse.text();
-        console.log("Raw CSV data:", historyText.substring(0, 200)); // לבדיקה
 
         const historyResult = Papa.parse(historyText, {
-            header: false, // אין כותרות
+            header: false,
             skipEmptyLines: true
         });
 
-        // מעבר על כל השורות ומציאת הפעולה האחרונה על כל מחשב
-        const computerStatus = {};
+        // נדלג על שורת הכותרות
+        const rows = historyResult.data.slice(1);
+
+        // מפת המחשבים והשורה האחרונה שלהם
+        const lastActions = {};
 
         // מעבר מהסוף להתחלה
-        const rows = historyResult.data;
         for (let i = rows.length - 1; i >= 0; i--) {
             const row = rows[i];
-            // עמודות: תאריך[0], שם[1], פעולה[2], כיתה[3], מחשב[4]
-            const computer = row[4]?.trim();
-            const action = row[2]?.trim();
-            const user = row[1]?.trim();
-            const date = row[0]?.trim();
+            const computer = row[4]?.trim();  // עמודת המחשב
 
-            // אם זה מחשב שעוד לא ראינו
-            if (computer && action && !computerStatus[computer]) {
-                computerStatus[computer] = {
-                    name: computer,
-                    isBorrowed: action === 'השאלה',
-                    borrowedBy: action === 'השאלה' ? user : null,
-                    lastAction: action,
-                    lastDate: date
+            // אם זה מחשב שעוד לא ראינו, נשמור את השורה שלו
+            if (computer && !lastActions[computer]) {
+                lastActions[computer] = {
+                    date: row[0],     // תאריך
+                    user: row[1],     // שם משתמש
+                    action: row[2],   // פעולה
+                    class: row[3],    // כיתה
+                    computer: computer // שם המחשב
                 };
-                
-                console.log(`${computer}: ${action} by ${user} on ${date}`);
             }
         }
 
-        // הדפסת סיכום
-        console.log("\nComputer Status Summary:");
-        console.log("=======================");
-        Object.values(computerStatus).forEach(computer => {
-            console.log(`${computer.name}: ${computer.isBorrowed ? 
-                `מושאל ל-${computer.borrowedBy}` : 
-                'זמין להשאלה'} (${computer.lastAction} - ${computer.lastDate})`
-            );
+        console.log("Last Action for Each Computer:");
+        console.log("==============================");
+        Object.entries(lastActions).forEach(([computer, data]) => {
+            console.log(`${computer}:`, data || "No actions found");
         });
 
-        return computerStatus;
+        return lastActions;
+
     } catch (error) {
         console.error('Error:', error);
         throw error;
@@ -542,10 +532,7 @@
 };
 
 // הפעלת הפונקציה
-analyzeComputerStatus().then(status => {
-    console.log("\nDetailed Status:");
-    console.log(status);
-});
+analyzeLastActions();
     </script>
 </body>
 </html>
