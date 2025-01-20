@@ -39,49 +39,77 @@
 
         // פונקציה לניתוח נתוני הגיליון
         const analyzeSheetData = async (sheetUrl) => {
-            try {
-                const response = await fetch(sheetUrl);
-                if (!response.ok) throw new Error('Failed to load sheet data');
-                const text = await response.text();
-                
-                const result = Papa.parse(text, {
-                    header: true,
-                    skipEmptyLines: true
-                });
-
-                console.log('Loading sheet data...', result.data);
-
-                // מיפוי המחשבים
-                const computers = new Map();
-
-                // מיון השורות מהחדש לישן
-                const sortedRows = result.data
-                    .filter(row => row['שם'] && row['פריט'] && row['פעולה'])
-                    .sort((a, b) => new Date(b['תאריך']) - new Date(a['תאריך']));
-
-                // עיבוד כל שורה
-                sortedRows.forEach(row => {
-                    const computerName = row['פריט'].trim();
-                    
-                    // אם לא ראינו את המחשב הזה עדיין (כלומר זה המופע האחרון שלו)
-                    if (!computers.has(computerName)) {
-                        const computer = new Computer(computerName);
-                        computer.isBorrowed = row['פעולה'].trim() === 'השאלה';
-                        if (computer.isBorrowed) {
-                            computer.borrowedBy = row['שם'].trim();
-                            computer.class = row['כיתה']?.trim();
-                        }
-                        computers.set(computerName, computer);
-                    }
-                });
-
-                console.log('Computers status:', Array.from(computers.values()));
-                return computers;
-            } catch (error) {
-                console.error('Error analyzing sheet:', error);
-                throw error;
-            }
-        };
+      try {
+          const response = await fetch(sheetUrl);
+          if (!response.ok) throw new Error('Failed to load sheet data');
+          const text = await response.text();
+          
+          const result = Papa.parse(text, {
+              header: true,
+              skipEmptyLines: true
+          });
+  
+          console.log('Raw Sheet Data:', result.data);
+  
+          // מיפוי המחשבים
+          const computers = new Map();
+          
+          // מיון השורות מהחדש לישן
+          const rows = result.data;
+          
+          // לוג של השורות הגולמיות
+          console.log('Raw Rows:', rows.slice(0, 2));
+          
+          // בדיקת שמות העמודות
+          console.log('Column Names:', Object.keys(rows[0] || {}));
+  
+          // מיון השורות מהחדש לישן
+          const sortedRows = rows
+              .filter(row => {
+                  const isValid = Boolean(row['פריט']?.trim());
+                  if (!isValid) {
+                      console.log('Invalid Row:', row);
+                  }
+                  return isValid;
+              })
+              .sort((a, b) => {
+                  const dateA = new Date(a['תאריך'] || '');
+                  const dateB = new Date(b['תאריך'] || '');
+                  return dateB - dateA;
+              });
+  
+          // עיבוד כל שורה
+          sortedRows.forEach(row => {
+              const computerName = row['פריט']?.trim();
+              if (!computerName) return;
+              
+              // אם לא ראינו את המחשב הזה עדיין
+              if (!computers.has(computerName)) {
+                  const computer = new Computer(computerName);
+                  const action = row['פעולה']?.trim();
+                  computer.isBorrowed = action === 'השאלה';
+                  if (computer.isBorrowed) {
+                      computer.borrowedBy = row['שם']?.trim();
+                      computer.class = row['כיתה']?.trim();
+                  }
+                  computers.set(computerName, computer);
+                  
+                  console.log('Added Computer:', {
+                      name: computerName,
+                      status: computer
+                  });
+              }
+          });
+  
+          const computersArray = Array.from(computers.values());
+          console.log('Final Computers:', computersArray);
+          
+          return computers;
+      } catch (error) {
+          console.error('Error analyzing sheet:', error);
+          throw error;
+      }
+  };
 
         const ComputerLendingSystem = () => {
             const [users, setUsers] = useState([]);
