@@ -462,14 +462,19 @@
                         </div>
                     </div>
 
-                    {process.env.NODE_ENV === 'development' && (
-                        <div className="mt-4 p-4 bg-gray-100 rounded">
-                            <h3 className="font-bold mb-2">מידע דיבאג:</h3>
-                            <pre className="text-xs overflow-auto">
-                                {JSON.stringify(Array.from(computers.values()), null, 2)}
-                            </pre>
-                        </div>
-                    )}
+                    <div className="mt-4 p-4 bg-gray-100 rounded text-right">
+      <h3 className="font-bold mb-2">מידע דיבאג:</h3>
+      <div className="text-xs space-y-1">
+          {Array.from(computers.values()).map(computer => (
+              <div key={computer.name} className="p-1">
+                  {computer.name}: {computer.isBorrowed ? 
+                      `מושאל ל${computer.borrowedBy}` : 
+                      'פנוי'
+                  }
+              </div>
+          ))}
+      </div>
+  </div>
                 </div>
             );
         };
