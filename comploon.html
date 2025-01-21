@@ -45,7 +45,7 @@
                 const COMPUTERS_LIST_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv';
 
                 // Fetch and parse main sheet data
-                const response = await fetch(`${sheetUrl}?_=${new Date().getTime()}`);
+                const response = await fetch(`${sheetUrl}${sheetUrl.includes('?') ? '&' : '?'}_=${new Date().getTime()}`);
                 if (!response.ok) throw new Error('Failed to load sheet data');
                 const text = await response.text();
 
