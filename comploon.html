@@ -177,7 +177,7 @@
                        .slice(1)
                        .filter(row => row[4]?.trim() === computerName)
                        .map(row => ({
-                           date: new Date(row[0]).toLocaleString(),
+                           date: row[0]?.trim(), // השתמש בערך הגולמי מהעמודה הראשונה
                            action: row[2]?.trim(),
                            user: row[1]?.trim(),
                            class: row[3]?.trim()
