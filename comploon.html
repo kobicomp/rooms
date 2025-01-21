@@ -25,6 +25,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
+        // מבנה נתונים למחשב
         class Computer {
             constructor(name) {
                 this.name = name;
@@ -37,25 +38,27 @@
 
         const { useState, useEffect, useCallback, useRef } = React;
 
+        // טעינה וניתוח נתוני מחשבים
         const analyzeSheetData = async (sheetUrl) => {
             try {
+                // הגדרת כתובות גוגל שיטס
                 const COMPUTERS_LIST_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv';
 
-                // Use fetch with current timestamp as cache buster
-                const response = await fetch(sheetUrl, {
-                    cache: 'no-store'
-                });
-
+                // טעינת הנתונים מהגיליון
+                const response = await fetch(`${sheetUrl}${sheetUrl.includes('?') ? '&' : '?'}_=${new Date().getTime()}`);
                 if (!response.ok) throw new Error('Failed to load sheet data');
                 const text = await response.text();
 
+                // ניתוח הטקסט עם PapaParse
                 const result = Papa.parse(text, {
                     header: false,
                     skipEmptyLines: true
                 });
 
+                // יצירת מפת מחשבים
                 const computers = new Map();
 
+                // טעינת רשימת המחשבים המקורית
                 const computersResponse = await fetch(COMPUTERS_LIST_URL);
                 const computersText = await computersResponse.text();
                 const computersResult = Papa.parse(computersText, {
@@ -63,6 +66,7 @@
                     skipEmptyLines: true
                 });
 
+                // יצירת מופעי מחשב
                 computersResult.data.forEach(row => {
                     if (row[0]) {
                         const computerName = row[0].trim();
@@ -71,17 +75,27 @@
                     }
                 });
 
+                // טיפול בשורות
                 const rows = result.data.slice(1);
+
+                // מעבר על השורות מהסוף להתחלה
                 for (let i = rows.length - 1; i >= 0; i--) {
                     const row = rows[i];
+
+                    // בדיקת אורך השורה
                     if (!row || row.length < 5) continue;
 
+                    // שם המחשב מעמודה E
                     const computerName = row[4]?.trim();
+
+                    // בדיקת קיום שם המחשב
                     if (!computerName) continue;
 
+                    // בדיקה אם המחשב קיים במערכת
                     const computer = computers.get(computerName);
                     if (!computer) continue;
 
+                    // עדכון רק אם זו השורה העדכנית ביותר עבור המחשב הזה
                     if (!computer.lastUpdate || new Date(row[0]) > computer.lastUpdate) {
                         const action = row[2]?.trim();
 
@@ -98,48 +112,59 @@
                 }
 
                 return computers;
+
             } catch (error) {
                 console.error('Error analyzing sheet:', error);
                 throw error;
             }
         };
 
+        // טעינת נתונים מקובץ CSV
+        const loadCSVData = async (url) => {
+            const response = await fetch(url);
+            const text = await response.text();
+            const result = Papa.parse(text, {
+                header: false,
+                skipEmptyLines: true
+            });
+            return result.data
+                .filter(row => row[0])
+                .map(row => ({
+                    value: row[0].trim()
+                }));
+        };
+
         const ComputerLendingSystem = () => {
+            const [users, setUsers] = useState([]);
+            const [classes, setClasses] = useState([]);
             const [computers, setComputers] = useState(new Map());
-            const [selectedComputer, setSelectedComputer] = useState(null);
-            const [computerHistory, setComputerHistory] = useState([]);
-            const [lastRefresh, setLastRefresh] = useState(null);
+            const [selectedUser, setSelectedUser] = useState('');
+            const [selectedClass, setSelectedClass] = useState('');
+            const [selectedAction, setSelectedAction] = useState('השאלה');
+            const [selectedComputers, setSelectedComputers] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [error, setError] = useState(null);
+            const [submitting, setSubmitting] = useState(false);
+            const [lastRefresh, setLastRefresh] = useState(null);
+            const [hasChanges, setHasChanges] = useState(false);
+            const [showComputerStatus, setShowComputerStatus] = useState(false);
 
+            // היסטוריה חדשים
+            const [showHistory, setShowHistory] = useState(false);
+            const [selectedHistoryComputer, setSelectedHistoryComputer] = useState('');
+            const [computerHistory, setComputerHistory] = useState([]);
+
+            // Refs for tracking submission and updates
+            const lastSubmissionTimeRef = useRef(null);
+            const updateIntervalRef = useRef(null);
+
+            const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse';
             const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
+            const USERS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
+            const CLASSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?output=csv';
 
-            const refreshComputersStatus = useCallback(async () => {
-                try {
-                    const computersMap = await analyzeSheetData(RESPONSES_URL);
-                    setComputers(computersMap);
-                    setLastRefresh(new Date());
-                } catch (error) {
-                    setError('אירעה שגיאה בטעינת נתוני המחשבים');
-                }
-            }, []);
-
-            useEffect(() => {
-                const loadInitialData = async () => {
-                    try {
-                        setIsLoading(true);
-                        await refreshComputersStatus();
-                    } catch (error) {
-                        setError('אירעה שגיאה בטעינת הנתונים');
-                    } finally {
-                        setIsLoading(false);
-                    }
-                };
-
-                loadInitialData();
-            }, [refreshComputersStatus]);
-
-            const showComputerHistory = async (computerName) => {
+            // פונקציה לשליפת היסטוריית מחשב
+            const fetchComputerHistory = async (computerName) => {
                 try {
                     const response = await fetch(RESPONSES_URL);
                     const text = await response.text();
@@ -156,92 +181,289 @@
                             action: row[2]?.trim(),
                             user: row[1]?.trim(),
                             class: row[3]?.trim()
-                        }));
+                        }))
+                        .reverse(); // הצג מהחדש לישן
 
-                    setSelectedComputer(computerName);
                     setComputerHistory(history);
                 } catch (error) {
                     console.error('Error fetching computer history:', error);
                 }
             };
 
-            if (isLoading) {
-                return (
-                    <div className="flex justify-center items-center h-screen">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                    </div>
-                );
-            }
+            // רענון סטטוס המחשבים
+            const refreshComputersStatus = useCallback(async () => {
+                try {
+                    const computersMap = await analyzeSheetData(RESPONSES_URL);
+                    setComputers(computersMap);
+                    setLastRefresh(new Date());
+                } catch (error) {
+                    setError('אירעה שגיאה בטעינת נתוני המחשבים');
+                }
+            }, []);
 
-            return (
-                <div className="container mx-auto p-4">
-                    <div className="flex justify-between items-center mb-4">
-                        <button 
-                            onClick={refreshComputersStatus} 
-                            className="bg-blue-500 text-white px-4 py-2 rounded"
-                        >
-                            רענן נתונים
-                        </button>
-                        {lastRefresh && (
-                            <div>עודכן לאחרונה: {lastRefresh.toLocaleTimeString()}</div>
-                        )}
-                    </div>
+            // טעינת נתונים ראשונית
+            useEffect(() => {
+                const loadAllData = async () => {
+                    try {
+                        setIsLoading(true);
+                        setError(null);
 
-                    <div className="grid grid-cols-3 gap-4">
-                        {Array.from(computers.values()).map(computer => (
-                            <div 
-                                key={computer.name} 
-                                className={`p-4 rounded ${computer.isBorrowed ? 'bg-red-200' : 'bg-green-200'}`}
+                        const [usersData, classesData] = await Promise.all([
+                            loadCSVData(USERS_URL),
+                            loadCSVData(CLASSES_URL)
+                        ]);
+
+                        setUsers(usersData);
+                        setClasses(classesData);
+
+                        await refreshComputersStatus();
+                    } catch (error) {
+                        setError('אירעה שגיאה בטעינת הנתונים');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+
+                loadAllData();
+            }, [refreshComputersStatus]);
+
+            // קבלת מחשבים זמינים
+            const getAvailableComputers = useCallback(() => {
+                const computersList = Array.from(computers.values());
+
+                if (selectedAction === 'השאלה') {
+                    return computersList.filter(computer => !computer.isBorrowed);
+                } else {
+                    return computersList.filter(computer =>
+                        computer.isBorrowed && computer.borrowedBy === selectedUser
+                    );
+                }
+            }, [computers, selectedAction, selectedUser]);
+
+            // שליחת טופס
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                if (submitting || selectedComputers.length === 0) return;
+
+                try {
+                    setSubmitting(true);
+
+                    // שליחת טופס לכל מחשב
+                    for (const computerName of selectedComputers) {
+                        const form = new FormData();
+                        form.append('entry.1927360815', selectedUser);
+                        form.append('entry.1595080383', selectedAction);
+                        form.append('entry.93664657', selectedClass);
+                        form.append('entry.973123435', computerName);
+
+                        await fetch(FORM_URL, {
+                            method: 'POST',
+                            body: form,
+                            mode: 'no-cors'
+                        });
+
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 30000));
+                    await refreshComputersStatus();
+
+                    setSelectedComputers([]);
+                    setHasChanges(false);
+                    alert('הפעולה הושלמה בהצלחה!');
+                } catch (error) {
+                    alert('אירעה שגיאה בשליחת הטופס');
+                } finally {
+                    setSubmitting(false);
+                }
+            };
+
+            // מודל סטטוס מחשבים
+            const ComputerStatusModal = () => (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-2xl font-bold">סטטוס מחשבים</h2>
+                            <button
+                                onClick={() => setShowComputerStatus(false)}
+                                className="text-red-500 hover:text-red-700"
                             >
-                                <div>שם: {computer.name}</div>
-                                <div>סטטוס: {computer.isBorrowed ? 'מושאל' : 'זמין'}</div>
-                                {computer.isBorrowed && (
-                                    <>
-                                        <div>מושאל ל: {computer.borrowedBy}</div>
-                                        <div>כיתה: {computer.class}</div>
-                                    </>
-                                )}
-                                <button 
-                                    onClick={() => showComputerHistory(computer.name)}
-                                    className="mt-2 bg-blue-500 text-white px-2 py-1 rounded"
-                                >
-                                    היסטוריה
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-
-                    {selectedComputer && (
-                        <div className="mt-8 bg-white p-4 rounded shadow">
-                            <h2 className="text-xl font-bold mb-4">היסטוריית {selectedComputer}</h2>
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="bg-gray-200">
-                                        <th>תאריך</th>
-                                        <th>פעולה</th>
-                                        <th>משתמש</th>
-                                        <th>כיתה</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {computerHistory.map((entry, index) => (
-                                        <tr key={index} className="text-center">
-                                            <td>{entry.date}</td>
-                                            <td>{entry.action}</td>
-                                            <td>{entry.user}</td>
-                                            <td>{entry.class}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                סגור
+                            </button>
                         </div>
-                    )}
+                        <table className="w-full">
+                            <thead>
+                                <tr className="bg-gray-200">
+                                    <th className="p-2">שם מחשב</th>
+                                    <th className="p-2">סטטוס</th>
+                                    <th className="p-2">מושאל ל</th>
+                                    <th className="p-2">כיתה</th>
+                                    <th className="p-2">עדכון אחרון</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {Array.from(computers.values()).map(computer => (
+                                    <tr
+                                        key={computer.name}
+                                        className={computer.isBorrowed ? "bg-red-100" : "bg-green-100"}
+                                    >
+                                        <td className="p-2 text-center">{computer.name}</td>
+                                        <td className="p-2 text-center">
+                                            {computer.isBorrowed ? 'מושאל' : 'זמין'}
+                                        </td>
+                                        <td className="p-2 text-center">{computer.borrowedBy || '-'}</td>
+                                        <td className="p-2 text-center">{computer.class || '-'}</td>
+                                        <td className="p-2 text-center">
+                                            {computer.lastUpdate ? computer.lastUpdate.toLocaleString() : '-'}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             );
-        };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ComputerLendingSystem />);
-    </script>
+            // מודל היסטוריה
+            const HistoryModal = () => (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded-lg w-3/4 max-h-[80vh]">
+                      <div className="flex justify-between items-center mb-4">
+                          <h2 className="text-2xl font-bold">היסטוריית מחשבים</h2>
+                          <button 
+                              onClick={() => {
+                                  setShowHistory(false);
+                                  setSelectedHistoryComputer('');
+                                  setComputerHistory([]);
+                              }}
+                              className="text-red-500 hover:text-red-700"
+                          >
+                              סגור
+                          </button>
+                      </div>
+
+                      <div className="mb-4">
+                          <select
+                              value={selectedHistoryComputer}
+                              onChange={(e) => {
+                                  const computerName = e.target.value;
+                                  setSelectedHistoryComputer(computerName);
+                                  if (computerName) {
+                                      fetchComputerHistory(computerName);
+                                  }
+                              }}
+                              className="w-full p-2 border rounded"
+                          >
+                              <option value="">בחר מחשב</option>
+                              {Array.from(computers.values()).map(computer => (
+                                  <option key={computer.name} value={computer.name}>
+                                      {computer.name}
+                                  </option>
+                              ))}
+                          </select>
+                      </div>
+
+                      {selectedHistoryComputer && computerHistory.length > 0 && (
+                          <div className="overflow-auto max-h-[50vh]">
+                              <table className="w-full border-collapse">
+                                  <thead>
+                                      <tr className="bg-gray-200">
+                                          <th className="p-2 border">תאריך</th>
+                                          <th className="p-2 border">פעולה</th>
+                                          <th className="p-2 border">משתמש</th>
+                                          <th className="p-2 border">כיתה</th>
+                                      </tr>
+                                  </thead>
+                                  <tbody>
+                                      {computerHistory.map((entry, index) => (
+                                          <tr key={index} className="text-center">
+                                              <td className="p-2 border">{entry.date}</td>
+                                              <td className="p-2 border">{entry.action}</td>
+                                              <td className="p-2 border">{entry.user}</td>
+                                              <td className="p-2 border">{entry.class}</td>
+                                          </tr>
+                                      ))}
+                                  </tbody>
+                              </table>
+                          </div>
+                      )}
+                  </div>
+              </div>
+          );
+
+          if (isLoading) {
+              return (
+                  <div className="flex justify-center items-center h-screen">
+                      <div className="text-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                          <div>טוען נתונים...</div>
+                      </div>
+                  </div>
+              );
+          }
+
+          if (error) {
+              return (
+                  <div className="text-center p-4">
+                      <div className="text-red-500 mb-4">{error}</div>
+                      <button
+                          onClick={() => window.location.reload()}
+                          className="bg-blue-500 text-white px-4 py-2 rounded"
+                      >
+                          נסה שוב
+                      </button>
+                  </div>
+              );
+          }
+
+          const availableComputers = getAvailableComputers();
+
+          return (
+              <div className="container mx-auto p-4">
+                  {showComputerStatus && <ComputerStatusModal />}
+                  {showHistory && <HistoryModal />}
+
+                  <h1 className="text-3xl font-bold mb-6 text-center">מערכת השאלת מחשבים</h1>
+
+                  <div className="flex justify-between items-center mb-4">
+                      {lastRefresh && (
+                          <div className="text-sm text-gray-500">
+                              עודכן לאחרונה: {lastRefresh.toLocaleTimeString()}
+                          </div>
+                      )}
+                      <div className="flex space-x-2">
+                          <button
+                              onClick={refreshComputersStatus}
+                              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                          >
+                              רענן נתונים
+                          </button>
+                          <button
+                              onClick={() => setShowComputerStatus(true)}
+                              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                          >
+                              סטטוס מחשבים
+                          </button>
+                          <button
+                              onClick={() => setShowHistory(true)}
+                              className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+                          >
+                              היסטוריה
+                          </button>
+                      </div>
+                  </div>
+
+                  <form onSubmit={handleSubmit} onChange={() => setHasChanges(true)} className="max-w-lg mx-auto space-y-6 bg-white p-6 rounded-lg shadow">
+                      {/* השאר את כל שאר הקוד כפי שהיה קודם */}
+                      {/* ... */}
+                  </form>
+              </div>
+          );
+      };
+
+      // Render the app
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<ComputerLendingSystem />);
+  </script>
 </body>
 </html>
