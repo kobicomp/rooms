@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הזמנות תקשוב בית ספר תורני נריה</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .button {
+            display: block;
+            width: 80%;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 20px;
+            font-size: 18px;
+            text-decoration: none;
+            color: white;
+            background-color: #007BFF;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        iframe {
+            width: 100%;
+            height: 500px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <h1>הזמנות תקשוב בית ספר תורני נריה</h1>
+        
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/dynami1.html')">
+            הזמנת דינמיקלאס אגף בנות
+        </button>
+        
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/dynami2.html')">
+            הזמנת דינמיקלאס אגף בנים  
+        </button>
+        
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/comptable.html')">
+            הזמנת מחשבים
+        </button>
+    </div>
+
+    <div id="content" style="display: none;">
+        <iframe id="contentFrame" src=""></iframe>
+        <button class="button" onclick="showMenu()">חזרה לתפריט</button>
+    </div>
+
+    <script>
+        function loadContent(url) {
+            document.getElementById("menu").style.display = "none";
+            document.getElementById("contentFrame").src = url;
+            document.getElementById("content").style.display = "block";
+        }
+
+        function showMenu() {
+            document.getElementById("content").style.display = "none";
+            document.getElementById("menu").style.display = "block";
+        }
+    </script>
+</body>
+</html>
