@@ -107,14 +107,14 @@
                 skipEmptyLines: true
             });
             
-            console.log('Parsed CSV data:', result.data); // נראה את התוצאה המפורסרת
+        //    console.log('Parsed CSV data:', result.data); // נראה את התוצאה המפורסרת
             
             // מיפוי לפי העמודות
             const mappedData = result.data
                 .filter(row => row[0]) // בודק שיש ערך בעמודה הראשונה
                 .map(row => ({
                     value: row[0].trim(),  // שם
-                    code: row[1]?.trim()   // קוד (אם קיים)
+                //    code: row[1]?.trim()   // קוד (אם קיים)
                 }));
                 
             console.log('Mapped data:', mappedData); // נראה את התוצאה הסופית
