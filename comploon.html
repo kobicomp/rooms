@@ -97,30 +97,21 @@
         // טעינת נתונים מקובץ CSV עם תמיכה בקוד אישי
         const loadCSVData = async (url) => {
         try {
-            console.log('Loading CSV from URL:', url);
             const response = await fetch(url);
             const text = await response.text();
-            console.log('Raw CSV data:', text.substring(0, 200)); // נראה את תחילת הקובץ
             
             const result = Papa.parse(text, {
                 header: false,
                 skipEmptyLines: true
             });
             
-        //    console.log('Parsed CSV data:', result.data); // נראה את התוצאה המפורסרת
-            
-            // מיפוי לפי העמודות
-            const mappedData = result.data
-                .filter(row => row[0]) // בודק שיש ערך בעמודה הראשונה
+            return result.data
+                .filter(row => row[0])
                 .map(row => ({
-                    value: row[0].trim(),  // שם
-                //    code: row[1]?.trim()   // קוד (אם קיים)
+                    value: row[0].trim(),
+                    code: row[1]?.trim()
                 }));
-                
-            console.log('Mapped data:', mappedData); // נראה את התוצאה הסופית
-            return mappedData;
         } catch (error) {
-            console.error('Error loading CSV:', error);
             throw error;
         }
     };
