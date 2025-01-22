@@ -215,9 +215,9 @@
       const [history, setHistory] = useState(null);
       const [isLoading, setIsLoading] = useState(true);
       const [selectedComputer, setSelectedComputer] = useState('');
-  
+
       const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
-  
+
       const fetchComputerHistory = async (computerName) => {
           try {
               setIsLoading(true);
@@ -227,7 +227,7 @@
                   header: false,
                   skipEmptyLines: true
               });
-  
+
               // סינון וארגון ההיסטוריה
               const computerHistory = result.data
                   .slice(1) // דילוג על כותרות
@@ -239,7 +239,7 @@
                       class: row[3]
                   }))
                   .sort((a, b) => new Date(b.date) - new Date(a.date)); // מיון לפי תאריך - מהחדש לישן
-  
+
               setHistory(computerHistory);
           } catch (error) {
               console.error('Error fetching history:', error);
@@ -247,14 +247,14 @@
               setIsLoading(false);
           }
       };
-  
+
       // טעינת היסטוריה כשמשתנה המחשב הנבחר
       useEffect(() => {
           if (selectedComputer) {
               fetchComputerHistory(selectedComputer);
           }
       }, [selectedComputer]);
-  
+
       return (
           <div className="modal-overlay">
               <div className="modal-content">
@@ -262,7 +262,7 @@
                       <h2 className="text-2xl font-bold">היסטוריית מחשבים</h2>
                       <button onClick={onClose} className="text-red-500 text-xl hover:text-red-700">✕</button>
                   </div>
-  
+
                   <div className="mb-4">
                       <select
                           value={selectedComputer}
@@ -277,7 +277,7 @@
                           ))}
                       </select>
                   </div>
-  
+
                   {isLoading ? (
                       <div className="text-center p-4">
                           <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 mx-auto"></div>
@@ -295,14 +295,14 @@
                                   </tr>
                               </thead>
                               <tbody>
-                                  {history.map((entry, index) => (
-                                      <tr key={index} className={entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'}>
-                                          <td>{new Date(entry.date).toLocaleString()}</td>
-                                          <td>{entry.action}</td>
-                                          <td>{entry.user}</td>
-                                          <td>{entry.class}</td>
-                                      </tr>
-                                  ))}
+                              {history.map((entry, index) => (
+  <tr key={index} className={entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'}>
+      <td>{entry.date}</td>
+      <td>{entry.action}</td>
+      <td>{entry.user}</td>
+      <td>{entry.class}</td>
+  </tr>
+))}
                               </tbody>
                           </table>
                       </div>
