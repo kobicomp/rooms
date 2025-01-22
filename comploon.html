@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מערכת השאלת מחשבים</title>
-    
+
     <!-- React and ReactDOM -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
@@ -12,7 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <style>
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -99,12 +99,12 @@
         try {
             const response = await fetch(url);
             const text = await response.text();
-            
+
             const result = Papa.parse(text, {
                 header: false,
                 skipEmptyLines: true
             });
-            
+
             return result.data
                 .filter(row => row[0])
                 .map(row => ({
@@ -121,7 +121,7 @@
                 const response = await fetch(sheetUrl);
                 if (!response.ok) throw new Error('Failed to load sheet data');
                 const text = await response.text();
-                
+
                 const result = Papa.parse(text, {
                     header: false,
                     skipEmptyLines: true
@@ -129,7 +129,7 @@
 
                 // מיפוי המחשבים
                 const computers = new Map();
-                
+
                 // טעינת רשימת המחשבים
                 const computersResponse = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv');
                 const computersText = await computersResponse.text();
@@ -151,9 +151,9 @@
                 for (let i = rows.length - 1; i >= 0; i--) {
                     const row = rows[i];
                     const computerName = row[4]?.trim();
-                    
+
                     if (!computerName) continue;
-                    
+
                     const computer = computers.get(computerName);
                     if (computer && (!computer.lastUpdate || new Date(row[0]) > computer.lastUpdate)) {
                         const action = row[2]?.trim();
@@ -211,103 +211,106 @@
         );
 
         // קומפוננטת מודל היסטוריית מחשבים
-        const ComputerHistoryModal = ({ onClose }) => {
-            const [history, setHistory] = useState(null);
-            const [isLoading, setIsLoading] = useState(true);
-            const [selectedComputer, setSelectedComputer] = useState('');
-
-            const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
-
-            useEffect(() => {
-                if (selectedComputer) {
-                    fetchComputerHistory(selectedComputer);
-                }
-            }, [selectedComputer]);
-
-            const fetchComputerHistory = async (computerName) => {
-                try {
-                    setIsLoading(true);
-                    const response = await fetch(RESPONSES_URL);
-                    const text = await response.text();
-                    const result = Papa.parse(text, {
-                        header: false,
-                        skipEmptyLines: true
-                    });
-
-                    const computerHistory = result.data
-                        .slice(1)
-                        .filter(row => row[4]?.trim() === computerName)
-                        .map(row => ({
-                            date: row[0],
-                            user: row[1],
-                            action: row[2],
-                            class: row[3]
-                        }))
-                        .sort((a, b) => new Date(b.date) - new Date(a.date));
-
-                    setHistory(computerHistory);
-                } catch (error) {
-                    console.error('Error fetching history:', error);
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            return (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-2xl font-bold">היסטוריית מחשבים</h2>
-                            <button onClick={onClose} className="text-red-500 text-xl hover:text-red-700">✕</button>
-                        </div>
-
-                        <div className="mb-4">
-                            <select
-                                value={selectedComputer}
-                                onChange={(e) => setSelectedComputer(e.target.value)}
-                                className="w-full p-2 border rounded"
-                            >
-                                <option value="">בחר מחשב</option>
-                                {Array.from(computers.values()).map(computer => (
-                                    <option key={computer.name} value={computer.name}>
-                                        {computer.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {isLoading ? (
-                            <div className="text-center p-4">
-                                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 mx-auto"></div>
-                                <div className="mt-2">טוען היסטוריה...</div>
-                            </div>
-                        ) : selectedComputer && history ? (
-                            <div className="overflow-auto">
-                                <table className="history-table">
-                                    <thead>
-                                        <tr>
-                                            <th>תאריך</th>
-                                            <th>פעולה</th>
-                                            <th>משתמש</th>
-                                            <th>כיתה</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {history.map((entry, index) => (
-                                            <tr key={index} className={entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'}>
-                                                <td>{new Date(entry.date).toLocaleString()}</td>
-                                                <td>{entry.action}</td>
-                                                <td>{entry.user}</td>
-                                                <td>{entry.class}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        ) : null}
-                    </div>
-                </div>
-            );
-        };
+        const ComputerHistoryModal = ({ computers, onClose }) => {
+      const [history, setHistory] = useState(null);
+      const [isLoading, setIsLoading] = useState(true);
+      const [selectedComputer, setSelectedComputer] = useState('');
+  
+      const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
+  
+      const fetchComputerHistory = async (computerName) => {
+          try {
+              setIsLoading(true);
+              const response = await fetch(RESPONSES_URL);
+              const text = await response.text();
+              const result = Papa.parse(text, {
+                  header: false,
+                  skipEmptyLines: true
+              });
+  
+              // סינון וארגון ההיסטוריה
+              const computerHistory = result.data
+                  .slice(1) // דילוג על כותרות
+                  .filter(row => row[4]?.trim() === computerName)
+                  .map(row => ({
+                      date: row[0],
+                      user: row[1],
+                      action: row[2],
+                      class: row[3]
+                  }))
+                  .sort((a, b) => new Date(b.date) - new Date(a.date)); // מיון לפי תאריך - מהחדש לישן
+  
+              setHistory(computerHistory);
+          } catch (error) {
+              console.error('Error fetching history:', error);
+          } finally {
+              setIsLoading(false);
+          }
+      };
+  
+      // טעינת היסטוריה כשמשתנה המחשב הנבחר
+      useEffect(() => {
+          if (selectedComputer) {
+              fetchComputerHistory(selectedComputer);
+          }
+      }, [selectedComputer]);
+  
+      return (
+          <div className="modal-overlay">
+              <div className="modal-content">
+                  <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-2xl font-bold">היסטוריית מחשבים</h2>
+                      <button onClick={onClose} className="text-red-500 text-xl hover:text-red-700">✕</button>
+                  </div>
+  
+                  <div className="mb-4">
+                      <select
+                          value={selectedComputer}
+                          onChange={(e) => setSelectedComputer(e.target.value)}
+                          className="w-full p-2 border rounded"
+                      >
+                          <option value="">בחר מחשב</option>
+                          {Array.from(computers.values()).map(computer => (
+                              <option key={computer.name} value={computer.name}>
+                                  {computer.name}
+                              </option>
+                          ))}
+                      </select>
+                  </div>
+  
+                  {isLoading ? (
+                      <div className="text-center p-4">
+                          <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 mx-auto"></div>
+                          <div className="mt-2">טוען היסטוריה...</div>
+                      </div>
+                  ) : selectedComputer && history ? (
+                      <div className="overflow-auto">
+                          <table className="history-table">
+                              <thead>
+                                  <tr>
+                                      <th>תאריך</th>
+                                      <th>פעולה</th>
+                                      <th>משתמש</th>
+                                      <th>כיתה</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  {history.map((entry, index) => (
+                                      <tr key={index} className={entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'}>
+                                          <td>{new Date(entry.date).toLocaleString()}</td>
+                                          <td>{entry.action}</td>
+                                          <td>{entry.user}</td>
+                                          <td>{entry.class}</td>
+                                      </tr>
+                                  ))}
+                              </tbody>
+                          </table>
+                      </div>
+                  ) : null}
+              </div>
+          </div>
+      );
+  };
 
         // הקומפוננטה הראשית
         const ComputerLendingSystem = () => {
@@ -380,11 +383,11 @@
             // קבלת מחשבים זמינים
             const getAvailableComputers = useCallback(() => {
                 const computersList = Array.from(computers.values());
-                
+
                 if (selectedAction === 'השאלה') {
                     return computersList.filter(computer => !computer.isBorrowed);
                 } else {
-                    return computersList.filter(computer => 
+                    return computersList.filter(computer =>
                         computer.isBorrowed && computer.borrowedBy === selectedUser
                     );
                 }
@@ -459,8 +462,8 @@
                 return (
                     <div className="text-center p-4">
                         <div className="text-red-500 mb-4">{error}</div>
-                        <button 
-                            onClick={() => window.location.reload()} 
+                        <button
+                            onClick={() => window.location.reload()}
                             className="bg-blue-500 text-white px-4 py-2 rounded"
                         >
                             נסה שוב
@@ -476,7 +479,7 @@
                     {showHistory && <ComputerHistoryModal computers={computers} onClose={() => setShowHistory(false)} />}
 
                     <h1 className="text-3xl font-bold mb-6 text-center">מערכת השאלת מחשבים</h1>
-                    
+
                     <div className="flex justify-between items-center mb-4">
                         {lastRefresh && (
                             <div className="text-sm text-gray-500">
@@ -504,11 +507,11 @@
                             </button>
                         </div>
                     </div>
-                    
+
                     <form onSubmit={handleSubmit} className="max-w-lg mx-auto space-y-6 bg-white p-6 rounded-lg shadow">
                         <div className="flex flex-col">
                             <label className="mb-2 font-medium">שם המשאיל:</label>
-                            <select 
+                            <select
                                 value={selectedUser}
                                 onChange={(e) => setSelectedUser(e.target.value)}
                                 className="p-2 border rounded focus:border-blue-500 focus:outline-none"
@@ -537,7 +540,7 @@
 
                         <div className="flex flex-col">
                             <label className="mb-2 font-medium">כיתה:</label>
-                            <select 
+                            <select
                                 value={selectedClass}
                                 onChange={(e) => setSelectedClass(e.target.value)}
                                 className="p-2 border rounded focus:border-blue-500 focus:outline-none"
@@ -554,7 +557,7 @@
 
                         <div className="flex flex-col">
                             <label className="mb-2 font-medium">פעולה:</label>
-                            <select 
+                            <select
                                 value={selectedAction}
                                 onChange={(e) => setSelectedAction(e.target.value)}
                                 className="p-2 border rounded focus:border-blue-500 focus:outline-none"
@@ -572,9 +575,9 @@
                             <div className="space-y-2 border rounded p-4 max-h-48 overflow-y-auto">
                                 {availableComputers.length === 0 ? (
                                     <div className="text-center text-gray-500">
-                                        {selectedAction === 'השאלה' ? 
-                                            'אין מחשבים זמינים להשאלה' : 
-                                            selectedUser ? 
+                                        {selectedAction === 'השאלה' ?
+                                            'אין מחשבים זמינים להשאלה' :
+                                            selectedUser ?
                                                 'אין מחשבים מושאלים למשתמש זה' :
                                                 'בחר משתמש כדי לראות את המחשבים המושאלים'
                                         }
@@ -610,8 +613,8 @@
                             )}
                         </div>
 
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition duration-200 disabled:bg-gray-400"
                             disabled={selectedComputers.length === 0 || submitting}
                         >
