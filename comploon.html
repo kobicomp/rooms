@@ -359,13 +359,11 @@
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                     {history.map((entry, index) => (
-                                        <tr 
-                                            key=index} 
-                                            className={`
-                                                ${entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'}
-                                                hover:bg-opacity-80 transition-colors
-                                            `}
-                                        >
+                                    {history.map((entry, index) => (
+<tr 
+  key={index}
+  className={`${entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'} hover:bg-opacity-80 transition-colors`}
+>
                                             <td className="p-3">{entry.date}</td>
                                             <td className="p-3">
                                                 <span className={`
