@@ -122,7 +122,7 @@
         }
 
         .tabs-container {
-            @apply flex flex-wrap gap-2 bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-t-lg shadow-lg;
+            @apply flex flex-wrap gap-2 bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-t-lg shadow-lg sticky top-0 z-10;
         }
 
         .tab-button {
@@ -135,6 +135,26 @@
 
         .tab-button:not(.active) {
             @apply bg-transparent text-white hover:bg-white/20;
+        }
+
+        .refresh-button {
+            @apply fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg 
+                   hover:bg-blue-600 transition-all hover:scale-110 z-20
+                   flex items-center justify-center;
+        }
+
+        .refresh-button.spinning i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .tab-content-header {
+            @apply text-2xl font-bold mb-6 text-center gradient-text 
+                   border-b pb-4 flex items-center justify-center;
         }
 
         /* Mobile Responsive */
@@ -175,10 +195,10 @@
 
         const { useState, useEffect, useCallback } = React;
 
-        // קומפוננטת לשונית
+        // קומפוננטת לשונית עם כותרות משופרות
         const Tabs = ({ activeTab, setActiveTab }) => {
             return (
-                <div className="tabs-container sticky top-0 z-10">
+                <div className="tabs-container">
                     <button
                         onClick={() => setActiveTab('form')}
                         className={`tab-button ${activeTab === 'form' ? 'active' : ''}`}
@@ -203,6 +223,26 @@
                 </div>
             );
         };
+
+        // כפתור רענון צף
+        const FloatingRefreshButton = ({ onClick, isRefreshing }) => (
+            <button 
+                onClick={onClick}
+                disabled={isRefreshing}
+                className={`refresh-button ${isRefreshing ? 'spinning' : ''}`}
+                title="רענן נתונים"
+            >
+                <i className="fas fa-sync-alt"></i>
+            </button>
+        );
+
+        // קומפוננטת כותרת לכל תוכן
+        const TabContentHeader = ({ icon, title }) => (
+            <h2 className="tab-content-header">
+                <i className={`fas ${icon} ml-2`}></i>
+                {title}
+            </h2>
+        );
 
         // קומפוננטת כרטיס מחשב
         const ComputerCard = ({ computer }) => {
@@ -242,7 +282,7 @@
         };
 
         // קומפוננטת מודל היסטוריית מחשבים
-        const ComputerHistoryModal = ({ computers }) => {
+        const ComputerHistoryContent = ({ computers }) => {
             const [history, setHistory] = useState(null);
             const [isLoading, setIsLoading] = useState(true);
             const [selectedComputer, setSelectedComputer] = useState('');
@@ -285,7 +325,9 @@
             }, [selectedComputer]);
 
             return (
-                <div className="p-4">
+                <div className="p-4 glass-card fade-in">
+                    <TabContentHeader icon="fa-history" title="היסטוריית מחשבים" />
+
                     <select
                         value={selectedComputer}
                         onChange={(e) => setSelectedComputer(e.target.value)}
@@ -318,7 +360,7 @@
                                 <tbody className="divide-y divide-gray-200">
                                     {history.map((entry, index) => (
                                         <tr 
-                                            key={index} 
+                                            key=index} 
                                             className={`
                                                 ${entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'}
                                                 hover:bg-opacity-80 transition-colors
@@ -353,6 +395,11 @@
                                 </tbody>
                             </table>
                         </div>
+                    ) : selectedComputer && !history.length ? (
+                        <div className="text-center p-8 text-gray-500">
+                            <i className="fas fa-info-circle text-4xl mb-4"></i>
+                            <p>אין היסטוריה למחשב זה</p>
+                        </div>
                     ) : null}
                 </div>
             );
@@ -374,9 +421,12 @@
             availableComputers,
             selectedComputers,
             setSelectedComputers,
-            isSubmitting
+            isSubmitting,
+            onSuccess
         }) => (
             <form onSubmit={handleSubmit} className="space-y-6 p-6 glass-card fade-in">
+                <TabContentHeader icon="fa-laptop-medical" title="השאלת מחשבים" />
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
                         <div>
@@ -540,8 +590,7 @@
                 </button>
             </form>
         );
-
-        // הקומפוננטה הראשית
+        // הקומפוננטה הראשית עם עדכונים אוטומטיים
         const ComputerLendingSystem = () => {
             const [users, setUsers] = useState([]);
             const [classes, setClasses] = useState([]);
@@ -555,15 +604,23 @@
             const [error, setError] = useState(null);
             const [isSubmitting, setIsSubmitting] = useState(false);
             const [lastRefresh, setLastRefresh] = useState(null);
-            const [showComputerStatus, setShowComputerStatus] = useState(false);
-            const [showHistory, setShowHistory] = useState(false);
             const [activeTab, setActiveTab] = useState('form');
+            const [isRefreshing, setIsRefreshing] = useState(false);
 
-            // URLs קבועים
             const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSdRc_KO4IuEEQpqcl9ed1XpY0hU4gaTYBNLuw3ns5Kx6m2fVw/formResponse';
             const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
             const USERS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
             const CLASSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?output=csv';
+
+            // עדכון אוטומטי כל 30 שניות
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    if (!isSubmitting) {
+                        refreshData();
+                    }
+                }, 30000);
+                return () => clearInterval(interval);
+            }, [isSubmitting]);
 
             // פונקציית אימות קוד אישי
             const validatePersonalCode = () => {
@@ -572,18 +629,30 @@
             };
 
             // רענון נתונים
-            const refreshData = useCallback(async () => {
+            const refreshData = async () => {
                 try {
-                    setIsLoading(true);
+                    setIsRefreshing(true);
                     const computersMap = await analyzeSheetData(RESPONSES_URL);
                     setComputers(computersMap);
                     setLastRefresh(new Date());
+
+                    // עדכון בחירת מחשבים במקרה שמחשב כבר לא זמין
+                    const availableComps = Array.from(computersMap.values()).filter(computer => {
+                        if (selectedAction === 'השאלה') {
+                            return !computer.isBorrowed;
+                        } else {
+                            return computer.isBorrowed && computer.borrowedBy === selectedUser;
+                        }
+                    }).map(computer => computer.name);
+
+                    setSelectedComputers(prev => prev.filter(computerName => availableComps.includes(computerName)));
                 } catch (error) {
+                    console.error('Error refreshing data:', error);
                     setError('אירעה שגיאה בטעינת נתוני המחשבים');
                 } finally {
-                    setIsLoading(false);
+                    setIsRefreshing(false);
                 }
-            }, [RESPONSES_URL]);
+            };
 
             // טעינת נתונים ראשונית
             useEffect(() => {
@@ -608,7 +677,7 @@
                 };
 
                 loadAllData();
-            }, [refreshData]);
+            }, []);
 
             // קבלת מחשבים זמינים
             const getAvailableComputers = useCallback(() => {
@@ -641,6 +710,26 @@
                 try {
                     setIsSubmitting(true);
 
+                    // עדכון מיידי של המצב המקומי
+                    const updatedComputers = new Map(computers);
+                    selectedComputers.forEach(computerName => {
+                        const computer = updatedComputers.get(computerName);
+                        if (computer) {
+                            if (selectedAction === 'השאלה') {
+                                computer.isBorrowed = true;
+                                computer.borrowedBy = selectedUser;
+                                computer.class = selectedClass;
+                            } else {
+                                computer.isBorrowed = false;
+                                computer.borrowedBy = null;
+                                computer.class = null;
+                            }
+                            computer.lastUpdate = new Date();
+                        }
+                    });
+                    setComputers(updatedComputers);
+
+                    // שליחת הטפסים
                     for (const computerName of selectedComputers) {
                         const form = new FormData();
                         form.append('entry.1927360815', selectedUser);
@@ -654,20 +743,16 @@
                             mode: 'no-cors'
                         });
 
-                        // המתנה בין שליחות טפסים
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     }
 
-                    // המתנה לעדכון הגיליון
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    await refreshData();
-
+                    // איפוס טופס
                     setSelectedComputers([]);
                     setPersonalCode('');
-                    
-                    // הודעת הצלחה מעוצבת
+
+                    // הודעת הצלחה
                     const successMessage = document.createElement('div');
-                    successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg z-50 animate-fade-in';
+                    successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg z-50 slide-in';
                     successMessage.innerHTML = `
                         <div class="flex items-center">
                             <i class="fas fa-check-circle ml-2"></i>
@@ -675,8 +760,15 @@
                         </div>
                     `;
                     document.body.appendChild(successMessage);
-                    setTimeout(() => successMessage.remove(), 3000);
-                    } catch (error) {
+                    setTimeout(() => {
+                        successMessage.classList.add('fade-out');
+                        setTimeout(() => successMessage.remove(), 300);
+                    }, 3000);
+
+                    // רענון נתונים אחרי השליחה
+                    await refreshData();
+                } catch (error) {
+                    console.error('Error submitting form:', error);
                     alert('אירעה שגיאה בשליחת הטופס');
                 } finally {
                     setIsSubmitting(false);
@@ -740,14 +832,17 @@
                         );
                     case 'status':
                         return (
-                            <div className="computer-grid fade-in">
-                                {Array.from(computers.values()).map((computer) => (
-                                    <ComputerCard key={computer.name} computer={computer} />
-                                ))}
+                            <div className="glass-card p-6 fade-in">
+                                <TabContentHeader icon="fa-desktop" title="מצב מחשבים" />
+                                <div className="computer-grid">
+                                    {Array.from(computers.values()).map((computer) => (
+                                        <ComputerCard key={computer.name} computer={computer} />
+                                    ))}
+                                </div>
                             </div>
                         );
                     case 'history':
-                        return <ComputerHistoryModal computers={computers} onClose={() => setActiveTab('form')} />;
+                        return <ComputerHistoryContent computers={computers} />;
                     default:
                         return null;
                 }
@@ -773,12 +868,17 @@
                         <div className="mt-6">
                             {renderContent()}
                         </div>
+
+                        <FloatingRefreshButton 
+                            onClick={refreshData} 
+                            isRefreshing={isRefreshing} 
+                        />
                     </div>
                 </div>
             );
         };
 
-        // טעינת הטפסים והפונקציות
+        // Utility functions
         const loadCSVData = async (url) => {
             try {
                 const response = await fetch(url);
@@ -801,7 +901,6 @@
             }
         };
 
-        // ניתוח נתוני הגיליון
         const analyzeSheetData = async (sheetUrl) => {
             try {
                 const response = await fetch(sheetUrl);
@@ -841,7 +940,7 @@
                     if (computer && (!computer.lastUpdate || new Date(row[0]) > computer.lastUpdate)) {
                         const action = row[2]?.trim();
                         computer.isBorrowed = action === 'השאלה';
-                        if (computer.isBorrowed) {
+                        if (computer.isBorrowed){
                             computer.borrowedBy = row[1]?.trim();
                             computer.class = row[3]?.trim();
                         } else {
