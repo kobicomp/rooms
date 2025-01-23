@@ -22,7 +22,6 @@
         body {
             font-family: 'Rubik', system-ui, -apple-system, sans-serif;
             background-color: #f5f7fa;
-            overflow-x: hidden;
         }
         
         .rtl {
@@ -79,68 +78,27 @@
             to { transform: translateX(0); opacity: 1; }
         }
 
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.7);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 900px;
-            max-height: 90vh;
-            overflow-y: auto;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .computer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 1rem;
-            padding: 1rem;
-        }
-
-        .computer-card {
-            padding: 1rem;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-        }
-
-        .form-input {
-            @apply p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent 
-                   transition-all shadow-sm hover:shadow-md w-full;
-        }
-
-        .tabs-container {
-            @apply flex flex-wrap gap-2 bg-gradient-to-r from-blue-500 to-purple-600 p-3 rounded-t-lg shadow-lg sticky top-0 z-10;
-        }
-
-        .tab-button {
-            @apply px-4 py-2 rounded-lg transition-all text-sm sm:text-base font-medium;
-        }
-
-        .tab-button.active {
-            @apply bg-white text-blue-600 shadow-lg transform scale-105;
-        }
-
-        .tab-button:not(.active) {
-            @apply bg-transparent text-white hover:bg-white/20;
-        }
-
         .refresh-button {
-            @apply fixed bottom-4 right-4 bg-blue-500 text-white p-3 rounded-full shadow-lg 
-                   hover:bg-blue-600 transition-all hover:scale-110 z-20
-                   flex items-center justify-center;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4F46E5;
+            color: white;
+            width: 50px;
+            height: 50px;
+            border-radius: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .refresh-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
         }
 
         .refresh-button.spinning i {
@@ -152,36 +110,56 @@
             to { transform: rotate(360deg); }
         }
 
-        .tab-content-header {
-            @apply text-2xl font-bold mb-6 text-center gradient-text 
-                   border-b pb-4 flex items-center justify-center;
+        .tabs-container {
+            display: flex;
+            background: linear-gradient(to right, #4F46E5, #7C3AED);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        /* Mobile Responsive */
+        .tab-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #4F46E5;
+            transform: scale(1.05);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-button:not(.active):hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         @media (max-width: 640px) {
-            .computer-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .modal-content {
-                width: 95%;
-                margin: 10px;
-                max-height: 85vh;
-            }
-
             .tabs-container {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                padding: 0.5rem;
+                flex-direction: column;
+            }
+            
+            .tab-button {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
 </head>
-<body class="bg-gray-50">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
+        const { useState, useEffect, useCallback } = React;
+
         // מבנה נתונים למחשב
         class Computer {
             constructor(name) {
@@ -193,56 +171,29 @@
             }
         }
 
-        const { useState, useEffect, useCallback } = React;
-
-        // קומפוננטת לשונית עם כותרות משופרות
+        // קומפוננטת לשונית
         const Tabs = ({ activeTab, setActiveTab }) => {
+            const tabs = [
+                { id: 'form', icon: 'fa-laptop-medical', text: 'השאלת מחשבים' },
+                { id: 'status', icon: 'fa-desktop', text: 'מצב מחשבים' },
+                { id: 'history', icon: 'fa-history', text: 'היסטוריה' }
+            ];
+
             return (
                 <div className="tabs-container">
-                    <button
-                        onClick={() => setActiveTab('form')}
-                        className={`tab-button ${activeTab === 'form' ? 'active' : ''}`}
-                    >
-                        <i className="fas fa-laptop-medical ml-2"></i>
-                        השאלת מחשבים
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('status')}
-                        className={`tab-button ${activeTab === 'status' ? 'active' : ''}`}
-                    >
-                        <i className="fas fa-desktop ml-2"></i>
-                        מצב מחשבים
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`tab-button ${activeTab === 'history' ? 'active' : ''}`}
-                    >
-                        <i className="fas fa-history ml-2"></i>
-                        היסטוריה
-                    </button>
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+                        >
+                            <i className={`fas ${tab.icon}`}></i>
+                            <span>{tab.text}</span>
+                        </button>
+                    ))}
                 </div>
             );
         };
-
-        // כפתור רענון צף
-        const FloatingRefreshButton = ({ onClick, isRefreshing }) => (
-            <button 
-                onClick={onClick}
-                disabled={isRefreshing}
-                className={`refresh-button ${isRefreshing ? 'spinning' : ''}`}
-                title="רענן נתונים"
-            >
-                <i className="fas fa-sync-alt"></i>
-            </button>
-        );
-
-        // קומפוננטת כותרת לכל תוכן
-        const TabContentHeader = ({ icon, title }) => (
-            <h2 className="tab-content-header">
-                <i className={`fas ${icon} ml-2`}></i>
-                {title}
-            </h2>
-        );
 
         // קומפוננטת כרטיס מחשב
         const ComputerCard = ({ computer }) => {
@@ -281,27 +232,33 @@
             );
         };
 
-        // קומפוננטת מודל היסטוריית מחשבים
-        const ComputerHistoryContent = ({ computers }) => {
-            const [history, setHistory] = useState(null);
-            const [isLoading, setIsLoading] = useState(true);
+        // קומפוננטת רשימת מחשבים
+        const ComputerGrid = ({ computers }) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+                {Array.from(computers.values()).map((computer) => (
+                    <ComputerCard key={computer.name} computer={computer} />
+                ))}
+            </div>
+        );
+
+        // קומפוננטת היסטוריה
+        const HistoryView = ({ computers }) => {
+            const [history, setHistory] = useState([]);
             const [selectedComputer, setSelectedComputer] = useState('');
-            
-            const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
+            const [isLoading, setIsLoading] = useState(false);
 
-            const fetchComputerHistory = async (computerName) => {
+            const fetchHistory = useCallback(async () => {
+                if (!selectedComputer) return;
+                
+                setIsLoading(true);
                 try {
-                    setIsLoading(true);
-                    const response = await fetch(RESPONSES_URL);
+                    const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv');
                     const text = await response.text();
-                    const result = Papa.parse(text, {
-                        header: false,
-                        skipEmptyLines: true
-                    });
-
+                    const result = Papa.parse(text, { header: false, skipEmptyLines: true });
+                    
                     const computerHistory = result.data
                         .slice(1)
-                        .filter(row => row[4]?.trim() === computerName)
+                        .filter(row => row[4]?.trim() === selectedComputer)
                         .map(row => ({
                             date: row[0],
                             user: row[1],
@@ -313,25 +270,27 @@
                     setHistory(computerHistory);
                 } catch (error) {
                     console.error('Error fetching history:', error);
+                    alert('שגיאה בטעינת ההיסטוריה');
                 } finally {
                     setIsLoading(false);
                 }
-            };
-
-            useEffect(() => {
-                if (selectedComputer) {
-                    fetchComputerHistory(selectedComputer);
-                }
             }, [selectedComputer]);
 
+            useEffect(() => {
+                fetchHistory();
+            }, [selectedComputer, fetchHistory]);
+
             return (
-                <div className="p-4 glass-card fade-in">
-                    <TabContentHeader icon="fa-history" title="היסטוריית מחשבים" />
+                <div className="glass-card p-6 fade-in">
+                    <h2 className="text-2xl font-bold mb-6 gradient-text text-center">
+                        <i className="fas fa-history ml-2"></i>
+                        היסטוריית מחשבים
+                    </h2>
 
                     <select
                         value={selectedComputer}
                         onChange={(e) => setSelectedComputer(e.target.value)}
-                        className="form-input mb-4"
+                        className="w-full p-3 rounded-lg border border-gray-300 mb-6"
                     >
                         <option value="">בחר מחשב</option>
                         {Array.from(computers.values()).map(computer => (
@@ -343,31 +302,33 @@
 
                     {isLoading ? (
                         <div className="text-center p-8">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
-                            <div className="mt-4 text-gray-600">טוען היסטוריה...</div>
+                            <div className="inline-block animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+                            <p className="mt-4 text-gray-600">טוען היסטוריה...</p>
                         </div>
-                    ) : selectedComputer && history ? (
-                        <div className="overflow-auto rounded-lg shadow">
+                    ) : selectedComputer && history.length > 0 ? (
+                        <div className="overflow-x-auto">
                             <table className="w-full">
-                                <thead className="bg-gray-100">
+                                <thead className="bg-gray-50">
                                     <tr>
-                                        <th className="p-3 text-right">תאריך</th>
-                                        <th className="p-3 text-right">פעולה</th>
-                                        <th className="p-3 text-right">משתמש</th>
-                                        <th className="p-3 text-right">כיתה</th>
+                                        <th className="p-3 text-right font-semibold">תאריך</th>
+                                        <th className="p-3 text-right font-semibold">פעולה</th>
+                                        <th className="p-3 text-right font-semibold">משתמש</th>
+                                        <th className="p-3 text-right font-semibold">כיתה</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
-                                    {history.map((entry, index) => (
-                                    {history.map((entry, index) => (
-<tr 
-  key={index}
-  className={`${entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'} hover:bg-opacity-80 transition-colors`}
->
+                                    {history.map((entry, idx) => (
+                                        <tr 
+                                            key={idx} 
+                                            className={`
+                                                ${entry.action === 'השאלה' ? 'bg-red-50' : 'bg-green-50'}
+                                                hover:bg-opacity-80 transition-colors
+                                            `}
+                                        >
                                             <td className="p-3">{entry.date}</td>
                                             <td className="p-3">
                                                 <span className={`
-                                                    inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                                    px-2 py-1 rounded-full text-xs font-medium
                                                     ${entry.action === 'השאלה' ? 
                                                         'bg-red-100 text-red-800' : 
                                                         'bg-green-100 text-green-800'
@@ -384,7 +345,7 @@
                                             </td>
                                             <td className="p-3">
                                                 <div className="flex items-center">
-                                                    <i className="fas fa-chalkboard mr-2 text-gray-400"></i>
+                                                <i className="fas fa-chalkboard mr-2 text-gray-400"></i>
                                                     {entry.class}
                                                 </div>
                                             </td>
@@ -393,7 +354,7 @@
                                 </tbody>
                             </table>
                         </div>
-                    ) : selectedComputer && !history.length ? (
+                    ) : selectedComputer ? (
                         <div className="text-center p-8 text-gray-500">
                             <i className="fas fa-info-circle text-4xl mb-4"></i>
                             <p>אין היסטוריה למחשב זה</p>
@@ -403,192 +364,7 @@
             );
         };
 
-        // קומפוננט טופס השאלה
-        const BorrowForm = ({
-            users,
-            classes,
-            selectedUser,
-            setSelectedUser,
-            selectedClass,
-            setSelectedClass,
-            selectedAction,
-            setSelectedAction,
-            personalCode,
-            setPersonalCode,
-            handleSubmit,
-            availableComputers,
-            selectedComputers,
-            setSelectedComputers,
-            isSubmitting,
-            onSuccess
-        }) => (
-            <form onSubmit={handleSubmit} className="space-y-6 p-6 glass-card fade-in">
-                <TabContentHeader icon="fa-laptop-medical" title="השאלת מחשבים" />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <i className="fas fa-user ml-2"></i>
-                                שם המשאיל
-                            </label>
-                            <select
-                                value={selectedUser}
-                                onChange={(e) => setSelectedUser(e.target.value)}
-                                className="form-input"
-                                required
-                            >
-                                <option value="">בחר משאיל</option>
-                                {users.map((user, index) => (
-                                    <option key={index} value={user.value}>
-                                        {user.value}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <i className="fas fa-key ml-2"></i>
-                                קוד אישי
-                            </label>
-                            <input
-                                type="password"
-                                value={personalCode}
-                                onChange={(e) => setPersonalCode(e.target.value)}
-                                className="form-input"
-                                required
-                                placeholder="הזן קוד אישי"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <i className="fas fa-chalkboard ml-2"></i>
-                                כיתה
-                            </label>
-                            <select
-                                value={selectedClass}
-                                onChange={(e) => setSelectedClass(e.target.value)}
-                                className="form-input"
-                                required
-                            >
-                                <option value="">בחר כיתה</option>
-                                {classes.map((cls, index) => (
-                                    <option key={index} value={cls.value}>
-                                        {cls.value}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                <i className="fas fa-exchange-alt ml-2"></i>
-                                פעולה
-                            </label>
-                            <select
-                                value={selectedAction}
-                                onChange={(e) => setSelectedAction(e.target.value)}
-                                className="form-input"
-                                required
-                            >
-                                <option value="השאלה">השאלה</option>
-                                <option value="החזרה">החזרה</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="mt-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                        <i className="fas fa-laptop ml-2"></i>
-                        {selectedAction === 'השאלה' ? 'מחשבים זמינים:' : 'מחשבים להחזרה:'}
-                    </label>
-                    <div className="border rounded-lg p-4 bg-white shadow-inner min-h-[200px] max-h-[400px] overflow-y-auto">
-                        {availableComputers.length === 0 ? (
-                            <div className="text-center text-gray-500 p-8">
-                                <i className="fas fa-info-circle text-4xl mb-4 text-blue-500"></i>
-                                <p>
-                                    {selectedAction === 'השאלה' ? 
-                                        'אין מחשבים זמינים להשאלה' : 
-                                        selectedUser ? 
-                                            'אין מחשבים מושאלים למשתמש זה' :
-                                            'בחר משתמש כדי לראות את המחשבים המושאלים'
-                                    }
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {availableComputers.map((computer, index) => (
-                                    <div 
-                                        key={index}
-                                        className={`
-                                            p-3 rounded-lg border cursor-pointer transition-all
-                                            ${selectedComputers.includes(computer.name) ? 
-                                                'border-blue-500 bg-blue-50' : 
-                                                'border-gray-200 hover:border-blue-300'
-                                            }
-                                        `}
-                                        onClick={() => {
-                                            if (selectedComputers.includes(computer.name)) {
-                                                setSelectedComputers(selectedComputers.filter(name => name !== computer.name));
-                                            } else {
-                                                setSelectedComputers([...selectedComputers, computer.name]);
-                                            }
-                                        }}
-                                    >
-                                        <div className="flex items-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedComputers.includes(computer.name)}
-                                                onChange={() => {}}
-                                                className="w-4 h-4 ml-3 text-blue-600 rounded"
-                                            />
-                                            <span className="text-sm font-medium">{computer.name}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    {selectedComputers.length > 0 && (
-                        <div className="mt-2 text-sm text-blue-600 flex items-center">
-                            <i className="fas fa-check-circle ml-2"></i>
-                            נבחרו {selectedComputers.length} מחשבים
-                        </div>
-                    )}
-                </div>
-
-                <button 
-                    type="submit" 
-                    disabled={selectedComputers.length === 0 || isSubmitting}
-                    className={`
-                        w-full mt-6 relative py-3 px-6 rounded-lg text-white font-medium 
-                        transition-all shadow-lg hover:shadow-xl
-                        ${selectedComputers.length === 0 || isSubmitting ?
-                            'bg-gray-400 cursor-not-allowed' :
-                            'gradient-bg hover:-translate-y-1'
-                        }
-                    `}
-                >
-                    {isSubmitting ? (
-                        <div className="flex items-center justify-center">
-                            <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent ml-3"></div>
-                            מעבד את הבקשה...
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center">
-                            <i className="fas fa-paper-plane ml-2"></i>
-                            שלח טופס
-                        </div>
-                    )}
-                </button>
-            </form>
-        );
-        // הקומפוננטה הראשית עם עדכונים אוטומטיים
+        // הקומפוננטה הראשית
         const ComputerLendingSystem = () => {
             const [users, setUsers] = useState([]);
             const [classes, setClasses] = useState([]);
@@ -609,8 +385,9 @@
             const RESPONSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ2olqsYKkQqNvrpNR7i8HBuv36zbu5mrVxeM7J-ZtUC0XTpHlvUu1-Jgk9m8pSvxD1GjwbsvGRpp_9/pub?output=csv';
             const USERS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv';
             const CLASSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?output=csv';
+            const COMPUTERS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv';
 
-            // עדכון אוטומטי כל 30 שניות
+            // עדכון אוטומטי
             useEffect(() => {
                 const interval = setInterval(() => {
                     if (!isSubmitting) {
@@ -620,82 +397,69 @@
                 return () => clearInterval(interval);
             }, [isSubmitting]);
 
-            // פונקציית אימות קוד אישי
             const validatePersonalCode = () => {
                 const selectedUserData = users.find(user => user.value === selectedUser);
                 return selectedUserData && selectedUserData.code === personalCode;
             };
 
-            // רענון נתונים
             const refreshData = async () => {
                 try {
                     setIsRefreshing(true);
-                    const computersMap = await analyzeSheetData(RESPONSES_URL);
+                    const computersMap = await analyzeSheetData();
                     setComputers(computersMap);
                     setLastRefresh(new Date());
 
-                    // עדכון בחירת מחשבים במקרה שמחשב כבר לא זמין
-                    const availableComps = Array.from(computersMap.values()).filter(computer => {
-                        if (selectedAction === 'השאלה') {
-                            return !computer.isBorrowed;
-                        } else {
-                            return computer.isBorrowed && computer.borrowedBy === selectedUser;
-                        }
-                    }).map(computer => computer.name);
+                    const availableComps = Array.from(computersMap.values())
+                        .filter(computer => selectedAction === 'השאלה' ? !computer.isBorrowed : 
+                            (computer.isBorrowed && computer.borrowedBy === selectedUser))
+                        .map(computer => computer.name);
 
-                    setSelectedComputers(prev => prev.filter(computerName => availableComps.includes(computerName)));
+                    setSelectedComputers(prev => prev.filter(name => availableComps.includes(name)));
                 } catch (error) {
                     console.error('Error refreshing data:', error);
-                    setError('אירעה שגיאה בטעינת נתוני המחשבים');
+                    setError('שגיאה בטעינת נתוני המחשבים');
                 } finally {
                     setIsRefreshing(false);
                 }
             };
 
-            // טעינת נתונים ראשונית
+            const loadAllData = async () => {
+                try {
+                    setIsLoading(true);
+                    setError(null);
+
+                    const [usersData, classesData] = await Promise.all([
+                        loadCSVData(USERS_URL),
+                        loadCSVData(CLASSES_URL)
+                    ]);
+
+                    setUsers(usersData);
+                    setClasses(classesData);
+                    await refreshData();
+                } catch (error) {
+                    console.error('Error loading initial data:', error);
+                    setError('שגיאה בטעינת הנתונים');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
             useEffect(() => {
-                const loadAllData = async () => {
-                    try {
-                        setIsLoading(true);
-                        setError(null);
-
-                        const [usersData, classesData] = await Promise.all([
-                            loadCSVData(USERS_URL),
-                            loadCSVData(CLASSES_URL)
-                        ]);
-
-                        setUsers(usersData);
-                        setClasses(classesData);
-                        await refreshData();
-                    } catch (error) {
-                        setError('אירעה שגיאה בטעינת הנתונים');
-                    } finally {
-                        setIsLoading(false);
-                    }
-                };
-
                 loadAllData();
             }, []);
 
-            // קבלת מחשבים זמינים
             const getAvailableComputers = useCallback(() => {
-                const computersList = Array.from(computers.values());
-                if (selectedAction === 'השאלה') {
-                    return computersList.filter(computer => !computer.isBorrowed);
-                } else {
-                    return computersList.filter(computer => 
-                        computer.isBorrowed && computer.borrowedBy === selectedUser
-                    );
-                }
+                return Array.from(computers.values()).filter(computer => 
+                    selectedAction === 'השאלה' ? !computer.isBorrowed : 
+                    (computer.isBorrowed && computer.borrowedBy === selectedUser)
+                );
             }, [computers, selectedAction, selectedUser]);
 
-            // איפוס בחירות בשינוי משתמש או פעולה
             useEffect(() => {
                 setSelectedComputers([]);
                 setPersonalCode('');
             }, [selectedUser, selectedAction]);
 
-            // טיפול בשליחת טופס
             const handleSubmit = async (e) => {
                 e.preventDefault();
                 if (isSubmitting || selectedComputers.length === 0) return;
@@ -708,7 +472,7 @@
                 try {
                     setIsSubmitting(true);
 
-                    // עדכון מיידי של המצב המקומי
+                    // עדכון מקומי מיידי
                     const updatedComputers = new Map(computers);
                     selectedComputers.forEach(computerName => {
                         const computer = updatedComputers.get(computerName);
@@ -727,7 +491,6 @@
                     });
                     setComputers(updatedComputers);
 
-                    // שליחת הטפסים
                     for (const computerName of selectedComputers) {
                         const form = new FormData();
                         form.append('entry.1927360815', selectedUser);
@@ -744,11 +507,9 @@
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     }
 
-                    // איפוס טופס
                     setSelectedComputers([]);
                     setPersonalCode('');
 
-                    // הודעת הצלחה
                     const successMessage = document.createElement('div');
                     successMessage.className = 'fixed top-4 right-4 bg-green-500 text-white p-4 rounded-lg shadow-lg z-50 slide-in';
                     successMessage.innerHTML = `
@@ -758,20 +519,186 @@
                         </div>
                     `;
                     document.body.appendChild(successMessage);
-                    setTimeout(() => {
-                        successMessage.classList.add('fade-out');
-                        setTimeout(() => successMessage.remove(), 300);
-                    }, 3000);
+                    setTimeout(() => successMessage.remove(), 3000);
 
-                    // רענון נתונים אחרי השליחה
                     await refreshData();
                 } catch (error) {
                     console.error('Error submitting form:', error);
-                    alert('אירעה שגיאה בשליחת הטופס');
+                    alert('שגיאה בשליחת הטופס');
                 } finally {
                     setIsSubmitting(false);
                 }
             };
+
+            // טופס השאלה
+            const BorrowForm = () => (
+                <form onSubmit={handleSubmit} className="glass-card p-6 space-y-6 fade-in">
+                    <h2 className="text-2xl font-bold mb-6 gradient-text text-center">
+                        <i className="fas fa-laptop-medical ml-2"></i>
+                        {selectedAction === 'השאלה' ? 'השאלת מחשב' : 'החזרת מחשב'}
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <i className="fas fa-user ml-2"></i>
+                                    שם המשאיל
+                                </label>
+                                <select
+                                    value={selectedUser}
+                                    onChange={(e) => setSelectedUser(e.target.value)}
+                                    className="w-full p-3 rounded-lg border border-gray-300"
+                                    required
+                                >
+                                    <option value="">בחר משאיל</option>
+                                    {users.map((user, idx) => (
+                                        <option key={idx} value={user.value}>{user.value}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <i className="fas fa-key ml-2"></i>
+                                    קוד אישי
+                                </label>
+                                <input
+                                    type="password"
+                                    value={personalCode}
+                                    onChange={(e) => setPersonalCode(e.target.value)}
+                                    className="w-full p-3 rounded-lg border border-gray-300"
+                                    required
+                                    placeholder="הזן קוד אישי"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <i className="fas fa-chalkboard ml-2"></i>
+                                    כיתה
+                                </label>
+                                <select
+                                    value={selectedClass}
+                                    onChange={(e) => setSelectedClass(e.target.value)}
+                                    className="w-full p-3 rounded-lg border border-gray-300"
+                                    required
+                                >
+                                    <option value="">בחר כיתה</option>
+                                    {classes.map((cls, idx) => (
+                                        <option key={idx} value={cls.value}>{cls.value}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    <i className="fas fa-exchange-alt ml-2"></i>
+                                    פעולה
+                                </label>
+                                <select
+                                    value={selectedAction}
+                                    onChange={(e) => setSelectedAction(e.target.value)}
+                                    className="w-full p-3 rounded-lg border border-gray-300"
+                                    required
+                                >
+                                    <option value="השאלה">השאלה</option>
+                                    <option value="החזרה">החזרה</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <i className="fas fa-laptop ml-2"></i>
+                            {selectedAction === 'השאלה' ? 'מחשבים זמינים:' : 'מחשבים להחזרה:'}
+                        </label>
+                        <div className="border rounded-lg p-4 bg-white min-h-[200px] max-h-[400px] overflow-y-auto">
+                            {getAvailableComputers().length === 0 ? (
+                                <div className="text-center text-gray-500 p-8">
+                                    <i className="fas fa-info-circle text-4xl mb-4"></i>
+                                    <p>
+                                        {selectedAction === 'השאלה' ? 
+                                            'אין מחשבים זמינים להשאלה' : 
+                                            selectedUser ? 
+                                                'אין מחשבים מושאלים למשתמש זה' :
+                                                'בחר משתמש כדי לראות את המחשבים המושאלים'
+                                        }
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {getAvailableComputers().map((computer, idx) => (
+                                        <div 
+                                            key={idx}
+                                            className={`
+                                                p-3 rounded-lg border cursor-pointer transition-all
+                                                ${selectedComputers.includes(computer.name) ? 
+                                                    'border-blue-500 bg-blue-50' : 
+                                                    'border-gray-200 hover:border-blue-300'
+                                                }
+                                            `}
+                                            onClick={() => {
+                                                if (selectedComputers.includes(computer.name)) {
+                                                    setSelectedComputers(prev => 
+                                                        prev.filter(name => name !== computer.name)
+                                                    );
+                                                } else {
+                                                    setSelectedComputers(prev => [...prev, computer.name]);
+                                                }
+                                            }}
+                                        >
+                                            <div className="flex items-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedComputers.includes(computer.name)}
+                                                    onChange={() => {}}
+                                                    className="w-4 h-4 ml-3 text-blue-600 rounded"
+                                                />
+                                                <span className="text-sm font-medium">{computer.name}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {selectedComputers.length > 0 && (
+                            <div className="mt-2 text-sm text-blue-600 flex items-center">
+                                <i className="fas fa-check-circle ml-2"></i>
+                                נבחרו {selectedComputers.length} מחשבים
+                            </div>
+                        )}
+                    </div>
+
+                    <button 
+                        type="submit"
+                        disabled={selectedComputers.length === 0 || isSubmitting}
+                        className={`
+                            w-full mt-6 py-3 px-6 rounded-lg text-white font-medium 
+                            transition-all shadow-lg hover:shadow-xl
+                            ${selectedComputers.length === 0 || isSubmitting ?
+                                'bg-gray-400 cursor-not-allowed' :
+                                'gradient-bg hover:-translate-y-1'
+                            }
+                        `}
+                    >
+                        {isSubmitting ? (
+                            <div className="flex items-center justify-center">
+                                <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent ml-3"></div>
+                                מעבד את הבקשה...
+                            </div>
+                        ) : (
+                            <div className="flex items-center justify-center">
+                                <i className="fas fa-paper-plane ml-2"></i>
+                                שלח טופס
+                            </div>
+                        )}
+                    </button>
+                </form>
+            );
 
             if (isLoading) {
                 return (
@@ -804,48 +731,6 @@
                 );
             }
 
-            const availableComputers = getAvailableComputers();
-
-            const renderContent = () => {
-                switch (activeTab) {
-                    case 'form':
-                        return (
-                            <BorrowForm 
-                                users={users}
-                                classes={classes}
-                                selectedUser={selectedUser}
-                                setSelectedUser={setSelectedUser}
-                                selectedClass={selectedClass}
-                                setSelectedClass={setSelectedClass}
-                                selectedAction={selectedAction}
-                                setSelectedAction={setSelectedAction}
-                                personalCode={personalCode}
-                                setPersonalCode={setPersonalCode}
-                                handleSubmit={handleSubmit}
-                                availableComputers={availableComputers}
-                                selectedComputers={selectedComputers}
-                                setSelectedComputers={setSelectedComputers}
-                                isSubmitting={isSubmitting}
-                            />
-                        );
-                    case 'status':
-                        return (
-                            <div className="glass-card p-6 fade-in">
-                                <TabContentHeader icon="fa-desktop" title="מצב מחשבים" />
-                                <div className="computer-grid">
-                                    {Array.from(computers.values()).map((computer) => (
-                                        <ComputerCard key={computer.name} computer={computer} />
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    case 'history':
-                        return <ComputerHistoryContent computers={computers} />;
-                    default:
-                        return null;
-                }
-            };
-
             return (
                 <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
                     <div className="max-w-6xl mx-auto">
@@ -864,13 +749,19 @@
                         <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
                         
                         <div className="mt-6">
-                            {renderContent()}
+                            {activeTab === 'form' && <BorrowForm />}
+                            {activeTab === 'status' && <ComputerGrid computers={computers} />}
+                            {activeTab === 'history' && <HistoryView computers={computers} />}
                         </div>
 
-                        <FloatingRefreshButton 
-                            onClick={refreshData} 
-                            isRefreshing={isRefreshing} 
-                        />
+                        <button
+                            onClick={refreshData}
+                            disabled={isRefreshing}
+                            className={`refresh-button ${isRefreshing ? 'spinning' : ''}`}
+                            title="רענן נתונים"
+                        >
+                            <i className="fas fa-sync-alt"></i>
+                        </button>
                     </div>
                 </div>
             );
@@ -881,7 +772,6 @@
             try {
                 const response = await fetch(url);
                 const text = await response.text();
-                
                 const result = Papa.parse(text, {
                     header: false,
                     skipEmptyLines: true
@@ -899,35 +789,33 @@
             }
         };
 
-        const analyzeSheetData = async (sheetUrl) => {
+        const analyzeSheetData = async () => {
             try {
-                const response = await fetch(sheetUrl);
-                if (!response.ok) throw new Error('Failed to load sheet data');
-                const text = await response.text();
+                const [responsesText, computersText] = await Promise.all([
+                    fetch(RESPONSES_URL).then(res => res.text()),
+                    fetch(COMPUTERS_URL).then(res => res.text())
+                ]);
 
-                const result = Papa.parse(text, {
+                const responseResult = Papa.parse(responsesText, {
+                    header: false,
+                    skipEmptyLines: true
+                });
+
+                const computerResult = Papa.parse(computersText, {
                     header: false,
                     skipEmptyLines: true
                 });
 
                 const computers = new Map();
 
-                // טעינת רשימת המחשבים
-                const computersResponse = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vQei6STuL-DPohSAnmCu8zgljKa4a2r8j4PfZYtrDUL1iV4eCc_eg-1R8VCwfKx-TYC5gS8uqQtE1B9/pub?output=csv');
-                const computersText = await computersResponse.text();
-                const computersResult = Papa.parse(computersText, {
-                    header: false,
-                    skipEmptyLines: true
-                });
-
-                computersResult.data.forEach(row => {
+                computerResult.data.forEach(row => {
                     if (row[0]) {
                         const computer = new Computer(row[0].trim());
                         computers.set(computer.name, computer);
                     }
                 });
 
-                const rows = result.data.slice(1);
+                const rows = responseResult.data.slice(1);
                 for (let i = rows.length - 1; i >= 0; i--) {
                     const row = rows[i];
                     const computerName = row[4]?.trim();
@@ -938,7 +826,7 @@
                     if (computer && (!computer.lastUpdate || new Date(row[0]) > computer.lastUpdate)) {
                         const action = row[2]?.trim();
                         computer.isBorrowed = action === 'השאלה';
-                        if (computer.isBorrowed){
+                        if (computer.isBorrowed) {
                             computer.borrowedBy = row[1]?.trim();
                             computer.class = row[3]?.trim();
                         } else {
@@ -956,7 +844,6 @@
             }
         };
 
-        // Render the app
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<ComputerLendingSystem />);
     </script>
