@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <title>מערכת הזמנת חדרים</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <style>
+        :root {
+            --empty-cell: #e8f5e9;
+            --booked-cell: #ffebee;
+            --pending-cell: #fff3e0;
+            --primary-color: #2196F3;
+            --success-color: #4CAF50;
+            --danger-color: #f44336;
+            --warning-color: #ff9800;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            direction: rtl;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .room-info {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .room-info h2 {
+            margin: 0;
+            color: var(--primary-color);
+        }
+
+        .room-info p {
+            margin: 10px 0 0 0;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .week-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: white;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: bold;
+        }
+
+        .cell-empty {
+            background-color: var(--empty-cell);
+            cursor: pointer;
+        }
+
+        .cell-empty:hover {
+            background-color: #d0e8d1;
+        }
+
+        .cell-booked {
+            background-color: var(--booked-cell);
+        }
+
+        .cell-pending {
+            background-color: var(--pending-cell);
+        }
+
+        .booking-info {
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+
+        .booking-info.pending {
+            border: 2px dashed var(--warning-color);
+        }
+
+        .status-text {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .status-text.available {
+            color: var(--success-color);
+        }
+
+        .status-text.booked {
+            color: var(--danger-color);
+        }
+
+        .status-text.pending {
+            color: var(--warning-color);
+        }
+
+        .booking-form {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            backdrop-filter: blur(3px);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        button:hover:not(:disabled) {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            z-index: 1001;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: var(--danger-color);
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
+        .info {
+            color: var(--primary-color);
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="room-info">
+            <h2 id="room-name"></h2>
+            <p id="room-description"></p>
+            <p id="room-details"></p>
+        </div>
+
+        <div class="controls">
+            <div class="week-nav">
+                <button onclick="scheduler.changeWeek(-1)">◀ שבוע קודם</button>
+                <span id="current-week"></span>
+                <button onclick="scheduler.changeWeek(1)">שבוע הבא ▶</button>
+            </div>
+        </div>
+
+        <table id="schedule">
+            <thead>
+                <tr>
+                    <th>שעה</th>
+                    <th>ראשון</th>
+                    <th>שני</th>
+                    <th>שלישי</th>
+                    <th>רביעי</th>
+                    <th>חמישי</th>
+                    <th>שישי</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+    <div class="booking-form" id="booking-form">
+        <h3>הזמנת חדר</h3>
+        <form id="reservation-form">
+            <div class="form-group">
+                <label for="teacher">שם המורה:</label>
+                <select id="teacher" required></select>
+                <div id="teacher-status" class="info"></div>
+            </div>
+            <div class="form-group">
+                <label for="class">כיתה:</label>
+                <select id="class" required></select>
+                <div id="class-status" class="info"></div>
+            </div>
+            <div class="form-group">
+                <label for="subject">מקצוע:</label>
+                <input type="text" id="subject" required>
+            </div>
+            <input type="hidden" id="selected-date">
+            <input type="hidden" id="selected-hour">
+            <div id="error-message" class="error"></div>
+            <div id="status-message" class="info"></div>
+            <button type="submit" class="submit-btn">שמור</button>
+            <button type="button" class="cancel-btn" onclick="scheduler.closeForm()">ביטול</button>
+        </form>
+    </div>
+
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">טוען נתונים...</div>
+    </div>
+
+    <script>
+        // הגדרות חדר - יש לשנות עבור כל חדר
+        const CONFIG = {
+            room: {
+                id: "dynamiclass",  // מזהה ייחודי לחדר
+                name: "חדר דינאמיקלאס",
+                description: "חדר מחשבים חדשני ומתקדם המיועד ללמידה פעילה ושיתופית",
+                details: "מתאים ל: עד 36 תלמידים, מצויד ב: מקרן, לוח חכם, 6 שולחנות עגולים"
+            },
+
+            // הגדרות מערכת השעות
+            daysSchedule: {
+                0: { name: 'ראשון', lessons: 7 },
+                1: { name: 'שני', lessons: 7 },
+                2: { name: 'שלישי', lessons: 5 },
+                3: { name: 'רביעי', lessons: 7 },
+                4: { name: 'חמישי', lessons: 7 },
+                5: { name: 'שישי', lessons: 4 }
+            },
+
+            // כתובות URL
+            urls: {
+                schedule: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR5uPK7t_NLTPGlZR4sU0owKAwoygzxa_924tiZH3dHDEEl-f72zjw1ra1AxObkbpMpLURv61Rv4a8M/pub?output=csv',
+                teachers: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQUvRHe90lOs14oPNfL3uRqN73uEgmg7L_ON2gXnCD-CuZ_FmTZDRb-rxmmZmeq4frFxh-IMcGLEfy-/pub?output=csv',
+                classes: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT1t6xbHD1i8uWUFQb5MmaHbjjyOLhcCdxs26f0nIABkNoGULEia-mfdsS78KlLNeZdtJ31XQEdi70C/pub?gid=0&single=true&output=csv',
+                form: 'https://docs.google.com/forms/d/e/1FAIpQLSeOFAZPcacD0pPV6ffQW4Eg5FpMvLqyTHjz3RZ1i5KMJeGrkQ/formResponse'
+            },
+
+            // שדות טופס גוגל
+            formFields: {
+                teacher: "entry.1323321977",
+                class: "entry.1450687623",
+                date: "entry.1431651377",
+                hour: "entry.1887686014",
+                subject: "entry.1869424962",
+                room: "entry.2087001113"
+            },
+
+            // הגדרות כלליות
+            maxWeeklyBookings: 4,
+            maxWeeksAhead: 4,
+            tempBookingTimeout: 5,
+            autoRefreshInterval: 60,
+            statusCheckInterval: 10,
+            maxStatusCheckAttempts: 10
+        };
+
+        const scheduler = {
+            currentWeek: moment(),
+            scheduleData: [],
+            teachersList: [],
+            classesList: [],
+            activeStatusChecks: new Map(),
+
+            tempBookingsManager: {
+                STORAGE_KEY: `tempBookings_${CONFIG.room.id}`,
+
+                getData() {
+                    try {
+                        const stored = localStorage.getItem(this.STORAGE_KEY);
+                        return stored ? JSON.parse(stored) : {};
+                    } catch {
+                        return {};
+                    }
+                },
+
+                setData(bookings) {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(bookings));
+                },
+
+                addBooking(booking) {
+                    const bookings = this.getData();
+                    const key = `${booking.תאריך}_${booking['שעה במערכת']}_${booking['שם החדר']}`;
+                    bookings[key] = {
+                        ...booking,
+                        expiryTime: Date.now() + (CONFIG.tempBookingTimeout * 60 * 1000)
+                    };
+                    this.setData(bookings);
+                },
+
+                removeBooking(key) {
+                    const bookings = this.getData();
+                    if (bookings[key]) {
+                        delete bookings[key];
+                        this.setData(bookings);
+                    }
+                },
+
+                getValidBookings() {
+                    const bookings = this.getData();
+                    const now = Date.now();
+                    const validBookings = {};
+                    Object.entries(bookings).forEach(([key, booking]) => {
+                        if (booking.expiryTime > now) {
+                            validBookings[key] = booking;
+                        }
+                    });
+                    this.setData(validBookings);
+                    return validBookings;
+                }
+            },
+
+            async loadData(isInitial = false) {
+                this.showLoading();
+                try {
+                    if (isInitial) {
+                        await Promise.all([
+                            this.loadTeachers(),
+                            this.loadClasses()
+                        ]);
+                        this.updateRoomInfo();
+                    }
+                    await this.loadSchedule();
+                    this.tempBookingsManager.getValidBookings();
+                    await this.delay(500);
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                } finally {
+                    this.hideLoading();
+                }
+            },
+
+            updateRoomInfo() {
+                document.getElementById('room-name').textContent = CONFIG.room.name;
+                document.getElementById('room-description').textContent = CONFIG.room.description;
+                document.getElementById('room-details').textContent = CONFIG.room.details;
+            },
+
+            async loadSchedule() {
+                try {
+                    const timestamp = Date.now();
+                    const baseUrl = CONFIG.urls.schedule;
+                    const urlWithTimestamp = baseUrl.includes('?') ?
+                        `${baseUrl}&t=${timestamp}` :
+                        `${baseUrl}?t=${timestamp}`;
+
+                    const response = await fetch(urlWithTimestamp, {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const csvText = await response.text();
+                    const newScheduleData = this.parseCSV(csvText);
+
+                    // בדיקת הזמנות זמניות
+                    const tempBookings = this.tempBookingsManager.getValidBookings();
+                    Object.entries(tempBookings).forEach(([key, tempBooking]) => {
+                        const confirmedBooking = newScheduleData.find(booking =>
+                            booking.תאריך === tempBooking.תאריך &&
+                            booking['שעה במערכת'] === tempBooking['שעה במערכת'] &&
+                            booking['שם החדר'] === tempBooking['שם החדר']
+                        );
+
+                        if (confirmedBooking) {
+                            const isOurBooking = confirmedBooking['שם המורה'] === tempBooking['שם המורה'] &&
+                                               confirmedBooking['כיתה'] === tempBooking['כיתה'];
+
+                            this.tempBookingsManager.removeBooking(key);
+                            if (this.activeStatusChecks.has(key)) {
+                                clearInterval(this.activeStatusChecks.get(key));
+                                this.activeStatusChecks.delete(key);
+
+                                if (isOurBooking) {
+                                    alert('ההזמנה שלך אושרה בהצלחה!');
+                                } else {
+                                    alert(`מצטערים, המורה ${confirmedBooking['שם המורה']} כבר הזמין/ה את החדר לשעה זו.`);
+                                }
+                            }
+                        }
+                    });
+
+                    this.scheduleData = newScheduleData;
+                    this.renderSchedule();
+                } catch (error) {
+                    console.error('Error loading schedule:', error);
+                }
+            },
+
+            async loadTeachers() {
+                const response = await fetch(CONFIG.urls.teachers);
+                const csvText = await response.text();
+                this.teachersList = this.parseList(csvText);
+                this.populateSelect('teacher', this.teachersList);
+            },
+
+            async loadClasses() {
+                const response = await fetch(CONFIG.urls.classes);
+                const csvText = await response.text();
+                this.classesList = this.parseList(csvText);
+                this.populateSelect('class', this.classesList);
+            },
+
+            getBookingForSlot(date, hour) {
+                // חיפוש הזמנה קבועה
+                const permanentBooking = this.scheduleData.find(booking =>
+                    booking.תאריך === date &&
+                    parseInt(booking['שעה במערכת']) === hour &&
+                    booking['שם החדר'] === CONFIG.room.name
+                );
+                if (permanentBooking) return permanentBooking;
+
+                // חיפוש הזמנה זמנית
+                const tempBookings = this.tempBookingsManager.getValidBookings();
+                const key = `${date}_${hour}_${CONFIG.room.name}`;
+                const tempBooking = tempBookings[key];
+
+                if (tempBooking) {
+                    return { ...tempBooking, isPending: true };
+                }
+
+                return null;
+            },
+
+            async handleSubmit(event) {
+                event.preventDefault();
+
+                const formData = {
+                    'שם המורה': document.getElementById('teacher').value,
+                    'כיתה': document.getElementById('class').value,
+                    'תאריך': document.getElementById('selected-date').value,
+                    'שעה במערכת': document.getElementById('selected-hour').value,
+                    'מקצוע': document.getElementById('subject').value,
+                    'שם החדר': CONFIG.room.name
+                };
+
+                try {
+                    const key = `${formData.תאריך}_${formData['שעה במערכת']}_${formData['שם החדר']}`;
+                    if (this.getBookingForSlot(formData.תאריך, parseInt(formData['שעה במערכת']))) {
+                        throw new Error('החדר כבר תפוס בשעה זו');
+                    }
+
+                    this.tempBookingsManager.addBooking(formData);
+                    this.renderSchedule();
+
+                    const googleFormData = new FormData();
+                    googleFormData.append(CONFIG.formFields.teacher, formData['שם המורה']);
+                    googleFormData.append(CONFIG.formFields.class, formData['כיתה']);
+                    googleFormData.append(CONFIG.formFields.date, formData['תאריך']);
+                    googleFormData.append(CONFIG.formFields.hour, formData['שעה במערכת']);
+                    googleFormData.append(CONFIG.formFields.subject, formData['מקצוע']);
+                    googleFormData.append(CONFIG.formFields.room, formData['שם החדר']);
+
+                    await fetch(CONFIG.urls.form, {
+                        method: 'POST',
+                        body: googleFormData,
+                        mode: 'no-cors'
+                    });
+
+                    this.startStatusCheck(formData);
+                    this.closeForm();
+                    alert('ההזמנה נשלחה ונמצאת בבדיקה. תקבל עדכון כשההזמנה תאושר.');
+                } catch (error) {
+                    document.getElementById('error-message').textContent = error.message;
+                }
+            },
+
+            renderSchedule() {
+                const tbody = document.querySelector('#schedule tbody');
+                tbody.innerHTML = '';
+
+                const startOfWeek = this.currentWeek.clone().startOf('week');
+                document.getElementById('current-week').textContent =
+                    `${startOfWeek.format('DD/MM/YYYY')} - ${startOfWeek.clone().endOf('week').format('DD/MM/YYYY')}`;
+
+                for (let hour = 1; hour <= Math.max(...Object.values(CONFIG.daysSchedule).map(d => d.lessons)); hour++) {
+                    const row = document.createElement('tr');
+
+                    const hourCell = document.createElement('td');
+                    hourCell.textContent = `שעה ${hour}`;
+                    hourCell.style.fontWeight = 'bold';
+                    row.appendChild(hourCell);
+
+                    for (let day = 0; day < 6; day++) {
+                        if (hour <= CONFIG.daysSchedule[day].lessons) {
+                            const cell = document.createElement('td');
+                            const date = startOfWeek.clone().add(day, 'days').format('YYYY-MM-DD');
+                            const booking = this.getBookingForSlot(date, hour);
+
+                            if (booking) {
+                                cell.className = booking.isPending ? 'cell-pending' : 'cell-booked';
+                                cell.innerHTML = `
+                                    <div class="booking-info ${booking.isPending ? 'pending' : ''}">
+                                        <div class="status-text ${booking.isPending ? 'pending' : 'booked'}">
+                                            ${booking.isPending ? 'ממתין לאישור' : 'תפוס'}
+                                        </div>
+                                        <strong>${booking['שם המורה']}</strong><br>
+                                        כיתה: ${booking['כיתה']}<br>
+                                        ${booking['מקצוע']}
+                                    </div>
+                                `;
+                            } else {
+                                cell.className = 'cell-empty';
+                                cell.innerHTML = '<div class="status-text available">פנוי</div>';
+                                cell.onclick = () => this.openBookingForm(date, hour);
+                            }
+                            row.appendChild(cell);
+                        } else {
+                            const emptyCell = document.createElement('td');
+                            emptyCell.style.backgroundColor = '#eee';
+                            row.appendChild(emptyCell);
+                        }
+                    }
+                    tbody.appendChild(row);
+                }
+            },
+
+            startStatusCheck(booking) {
+                const key = `${booking.תאריך}_${booking['שעה במערכת']}_${booking['שם החדר']}`;
+                let attempts = 0;
+
+                if (this.activeStatusChecks.has(key)) {
+                    clearInterval(this.activeStatusChecks.get(key));
+                }
+
+                const checkInterval = setInterval(async () => {
+                    attempts++;
+                    await this.loadSchedule();
+
+                    const tempBooking = this.tempBookingsManager.getData()[key];
+                    if (!tempBooking) {
+                        clearInterval(checkInterval);
+                        this.activeStatusChecks.delete(key);
+                    } else if (attempts >= CONFIG.maxStatusCheckAttempts) {
+                        clearInterval(checkInterval);
+                        this.activeStatusChecks.delete(key);
+                        alert('ההזמנה עדיין בהמתנה לאישור. נא לבדוק שוב מאוחר יותר.');
+                        this.tempBookingsManager.removeBooking(key);
+                        this.renderSchedule();
+                    }
+                }, CONFIG.statusCheckInterval * 1000);
+
+                this.activeStatusChecks.set(key, checkInterval);
+            },
+
+            openBookingForm(date, hour) {
+                document.getElementById('selected-date').value = date;
+                document.getElementById('selected-hour').value = hour;
+                document.getElementById('error-message').textContent = '';
+                document.getElementById('status-message').textContent = '';
+                document.getElementById('reservation-form').reset();
+
+                this.updateWeeklyStatus(date);
+
+                document.getElementById('overlay').style.display = 'block';
+                document.getElementById('booking-form').style.display = 'block';
+            },
+
+            closeForm() {
+                document.getElementById('overlay').style.display = 'none';
+                document.getElementById('booking-form').style.display = 'none';
+            },
+
+            updateWeeklyStatus(date) {
+                const weekStart = moment(date).startOf('week');
+                const teacher = document.getElementById('teacher').value;
+                const className = document.getElementById('class').value;
+
+                if (teacher) {
+                    const teacherBookings = this.countWeeklyBookings('שם המורה', teacher, weekStart);
+                    document.getElementById('teacher-status').textContent =
+                        `שיעורים השבוע: ${teacherBookings}/${CONFIG.maxWeeklyBookings}`;
+                }
+
+                if (className) {
+                    const classBookings = this.countWeeklyBookings('כיתה', className, weekStart);
+                    document.getElementById('class-status').textContent =
+                        `שיעורים השבוע: ${classBookings}/${CONFIG.maxWeeklyBookings}`;
+                }
+            },
+
+            countWeeklyBookings(field, value, weekStart) {
+                const weekEnd = weekStart.clone().endOf('week');
+                let count = 0;
+
+                count += this.scheduleData.filter(booking => {
+                    const bookingDate = moment(booking['תאריך']);
+                    return booking[field] === value &&
+                           booking['שם החדר'] === CONFIG.room.name &&
+                           bookingDate.isBetween(weekStart, weekEnd, 'day', '[]');
+                }).length;
+
+                const tempBookings = this.tempBookingsManager.getValidBookings();
+                count += Object.values(tempBookings).filter(booking => {
+                    const bookingDate = moment(booking['תאריך']);
+                    return booking[field] === value &&
+                           booking['שם החדר'] === CONFIG.room.name &&
+                           bookingDate.isBetween(weekStart, weekEnd, 'day', '[]');
+                }).length;
+
+                return count;
+            },
+
+            changeWeek(delta) {
+                const newWeek = this.currentWeek.clone().add(delta, 'weeks');
+                const today = moment();
+                const maxDate = today.clone().add(CONFIG.maxWeeksAhead, 'weeks').endOf('week');
+
+                if (delta > 0 && newWeek.startOf('week').isAfter(maxDate)) {
+                    alert(`לא ניתן להזמין יותר מ-${CONFIG.maxWeeksAhead} שבועות מראש`);
+                    return;
+                }
+
+                if (delta < 0 && newWeek.startOf('week').isBefore(today.startOf('week'))) {
+                    alert('לא ניתן להזמין בתאריך שעבר');
+                    return;
+                }
+
+                this.currentWeek = newWeek;
+                this.renderSchedule();
+            },
+
+            parseCSV(csv) {
+                const lines = csv.split('\n');
+                const headers = lines[0].split(',').map(h => h.trim());
+                return lines.slice(1)
+                    .map(line => {
+                        const values = line.split(',').map(v => v.trim());
+                        const entry = {};
+                        headers.forEach((header, i) => {
+                            entry[header] = values[i];
+                        });
+                        return entry;
+                    })
+                    .filter(entry => entry['שם המורה'] && entry['תאריך']);
+            },
+
+            parseList(csv) {
+                return csv.split('\n')
+                    .map(line => line.split(',')[0].trim())
+                    .filter(item => item && item !== 'null' && item !== '');
+            },
+
+            populateSelect(id, items) {
+                const select = document.getElementById(id);
+                select.innerHTML = `<option value="">בחר/י ${id === 'teacher' ? 'מורה' : 'כיתה'}</option>`;
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item;
+                    option.textContent = item;
+                    select.appendChild(option);
+                });
+            },
+
+            showLoading() {
+                document.getElementById('loading-overlay').style.display = 'flex';
+            },
+
+            hideLoading() {
+                document.getElementById('loading-overlay').style.display = 'none';
+            },
+
+            async delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+            };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            scheduler.loadData(true);
+            setInterval(() => scheduler.loadData(), CONFIG.autoRefreshInterval * 1000);
+
+            document.getElementById('teacher').addEventListener('change', () =>
+                scheduler.updateWeeklyStatus(document.getElementById('selected-date').value));
+
+            document.getElementById('class').addEventListener('change', () =>
+                scheduler.updateWeeklyStatus(document.getElementById('selected-date').value));
+
+            document.getElementById('reservation-form').addEventListener('submit', (e) =>
+                scheduler.handleSubmit(e));
+        });
+    </script>
+</body>
+</html>
