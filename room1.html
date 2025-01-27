@@ -297,8 +297,8 @@
         // הגדרות חדר - יש לשנות עבור כל חדר
         const CONFIG = {
             room: {
-                id: "room1",  // מזהה ייחודי לחדר
-                name: "חדר מספר 1",
+                id: "dynamiclass",  // מזהה ייחודי לחדר
+                name: "חדר דינאמיקלאס",
                 description: "חדר מחשבים חדשני ומתקדם המיועד ללמידה פעילה ושיתופית",
                 details: "מתאים ל: עד 36 תלמידים, מצויד ב: מקרן, לוח חכם, 6 שולחנות עגולים"
             },
@@ -422,61 +422,49 @@
             },
 
             async loadSchedule() {
-                try {
-                    const timestamp = Date.now();
-                    const baseUrl = CONFIG.urls.schedule;
-                    const urlWithTimestamp = baseUrl.includes('?') ?
-                        `${baseUrl}&t=${timestamp}` :
-                        `${baseUrl}?t=${timestamp}`;
-
-                    const response = await fetch(urlWithTimestamp, {
-                        cache: 'no-store',
-                        headers: {
-                            'Cache-Control': 'no-cache, no-store, must-revalidate',
-                            'Pragma': 'no-cache'
-                        }
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const csvText = await response.text();
-                    const newScheduleData = this.parseCSV(csvText);
-
-                    // בדיקת הזמנות זמניות
-                    const tempBookings = this.tempBookingsManager.getValidBookings();
-                    Object.entries(tempBookings).forEach(([key, tempBooking]) => {
-                        const confirmedBooking = newScheduleData.find(booking =>
-                            booking.תאריך === tempBooking.תאריך &&
-                            booking['שעה במערכת'] === tempBooking['שעה במערכת'] &&
-                            booking['שם החדר'] === tempBooking['שם החדר']
-                        );
-
-                        if (confirmedBooking) {
-                            const isOurBooking = confirmedBooking['שם המורה'] === tempBooking['שם המורה'] &&
-                                               confirmedBooking['כיתה'] === tempBooking['כיתה'];
-
-                            this.tempBookingsManager.removeBooking(key);
-                            if (this.activeStatusChecks.has(key)) {
-                                clearInterval(this.activeStatusChecks.get(key));
-                                this.activeStatusChecks.delete(key);
-
-                                if (isOurBooking) {
-                                    alert('ההזמנה שלך אושרה בהצלחה!');
-                                } else {
-                                    alert(`מצטערים, המורה ${confirmedBooking['שם המורה']} כבר הזמין/ה את החדר לשעה זו.`);
-                                }
-                            }
-                        }
-                    });
-
-                    this.scheduleData = newScheduleData;
-                    this.renderSchedule();
-                } catch (error) {
-                    console.error('Error loading schedule:', error);
+        try {
+            const timestamp = Date.now();
+            const baseUrl = CONFIG.urls.schedule;
+            const urlWithTimestamp = baseUrl.includes('?') ?
+                `${baseUrl}&t=${timestamp}` :
+                `${baseUrl}?t=${timestamp}`;
+    
+            const response = await fetch(urlWithTimestamp, {
+                cache: 'no-store',
+                headers: {
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
                 }
-            },
+            });
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
+            const csvText = await response.text();
+            let newScheduleData = this.parseCSV(csvText);
+            
+            // מרחיב את ההזמנות לפי מספר השבועות
+            const expandedScheduleData = [];
+            newScheduleData.forEach(booking => {
+                const weeksCount = parseInt(booking['מספר שבועות']) || 1;  // קורא מעמודה H
+                const baseDate = moment(booking['תאריך']);
+                
+                for (let week = 0; week < weeksCount; week++) {
+                    expandedScheduleData.push({
+                        ...booking,
+                        'תאריך': baseDate.clone().add(week, 'weeks').format('YYYY-MM-DD')
+                    });
+                }
+            });
+    
+            this.scheduleData = expandedScheduleData;
+            this.renderSchedule();
+    
+        } catch (error) {
+            console.error('Error loading schedule:', error);
+        }
+    },
 
             async loadTeachers() {
                 const response = await fetch(CONFIG.urls.teachers);
@@ -579,18 +567,20 @@
                             const booking = this.getBookingForSlot(date, hour);
 
                             if (booking) {
-                                cell.className = booking.isPending ? 'cell-pending' : 'cell-booked';
-                                cell.innerHTML = `
-                                    <div class="booking-info ${booking.isPending ? 'pending' : ''}">
-                                        <div class="status-text ${booking.isPending ? 'pending' : 'booked'}">
-                                            ${booking.isPending ? 'ממתין לאישור' : 'תפוס'}
-                                        </div>
-                                        <strong>${booking['שם המורה']}</strong><br>
-                                        כיתה: ${booking['כיתה']}<br>
-                                        ${booking['מקצוע']}
-                                    </div>
-                                `;
-                            } else {
+      cell.className = booking.isPending ? 'cell-pending' : 'cell-booked';
+      cell.innerHTML = `
+          <div class="booking-info ${booking.isPending ? 'pending' : ''}">
+              <div class="status-text ${booking.isPending ? 'pending' : 'booked'}">
+                  ${booking.isPending ? 'ממתין לאישור' : 'תפוס'}
+              </div>
+              <strong>${booking['שם המורה']}</strong><br>
+              כיתה: ${booking['כיתה']}<br>
+              ${booking['מקצוע']}
+              ${parseInt(booking['מספר שבועות']) > 1 ? 
+                  `<br><small>(שיעור קבוע)</small>` : ''}
+          </div>
+      `;
+  } else {
                                 cell.className = 'cell-empty';
                                 cell.innerHTML = '<div class="status-text available">פנוי</div>';
                                 cell.onclick = () => this.openBookingForm(date, hour);
