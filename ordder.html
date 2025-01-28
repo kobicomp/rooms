@@ -5,46 +5,159 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>הזמנות תקשוב בית ספר תורני נריה</title>
     <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #2ecc71;
+            --background-color: #f6f9fc;
+            --text-color: #2c3e50;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             text-align: center;
-            background-color: #f0f0f0;
+            background: linear-gradient(135deg, var(--background-color), #ffffff);
             margin: 0;
             padding: 0;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
+
         h1 {
-            color: #333;
-            padding: 20px;
+            color: var(--text-color);
+            padding: 25px;
             margin: 0;
-        }
-        .button {
-            display: block;
-            width: 80%;
-            max-width: 400px;
-            margin: 10px auto;
-            padding: 15px;
-            font-size: 16px;
-            text-decoration: none;
+            font-size: 2em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
             color: white;
-            background-color: #007BFF;
-            border-radius: 5px;
+            border-bottom: 4px solid rgba(0,0,0,0.1);
+        }
+
+        #menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .button {
+            position: relative;
+            padding: 20px;
+            font-size: 18px;
+            color: white;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            border-radius: 10px;
             border: none;
             cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
         }
+
+        .button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255,255,255,0.3),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .button:hover::before {
+            left: 100%;
+        }
+
         #content {
             flex: 1;
             width: 100%;
+            transition: all 0.3s ease;
         }
+
         iframe {
             width: 100%;
             height: 100%;
             border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         }
+
         #backButton {
-            margin: 10px auto;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            padding: 15px 30px;
+            border-radius: 30px;
+            background: var(--primary-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        /* Loading Animation */
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: translate(-50%, -50%) rotate(0deg); }
+            100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* מדיה קוורי למסכים קטנים */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.5em;
+                padding: 15px;
+            }
+
+            #menu {
+                grid-template-columns: 1fr;
+                padding: 10px;
+            }
+
+            .button {
+                font-size: 16px;
+                height: 80px;
+            }
+
+            #backButton {
+                bottom: 10px;
+                right: 10px;
+                padding: 10px 20px;
+            }
         }
     </style>
 </head>
@@ -92,25 +205,34 @@
             חדר 10
         </button>
         
-        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/comptable.html')">
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/comptable.html')" style="background: linear-gradient(45deg, #e74c3c, #c0392b)">
             הזמנת מחשבים
         </button>
     </div>
+    <div class="loading" id="loading"></div>
     <div id="content" style="display: none;">
         <iframe id="contentFrame" src=""></iframe>
     </div>
     <button id="backButton" class="button" style="display: none;" onclick="showMenu()">חזרה לתפריט</button>
     <script>
         function loadContent(url) {
+            const loading = document.getElementById("loading");
+            loading.style.display = "block";
+            
             document.getElementById("menu").style.display = "none";
             document.getElementById("contentFrame").src = url;
             document.getElementById("content").style.display = "block";
             document.getElementById("backButton").style.display = "block";
+
+            document.getElementById("contentFrame").onload = function() {
+                loading.style.display = "none";
+            };
         }
+
         function showMenu() {
             document.getElementById("content").style.display = "none";
             document.getElementById("backButton").style.display = "none";
-            document.getElementById("menu").style.display = "block";
+            document.getElementById("menu").style.display = "grid";
         }
     </script>
 </body>
