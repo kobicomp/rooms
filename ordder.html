@@ -52,25 +52,54 @@
     <div id="menu">
         <h1>הזמנות תקשוב בית ספר תורני נריה</h1>
         
-        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/dynami1.html')">
-            הזמנת דינמיקלאס אגף בנות
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room1.html')">
+            חדר 1
         </button>
         
-        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/dynami2.html')">
-            הזמנת דינמיקלאס אגף בנים  
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room2.html')">
+            חדר 2
+        </button>
+        
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room3.html')">
+            חדר 3
+        </button>
+
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room4.html')">
+            חדר 4
+        </button>
+
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room5.html')">
+            חדר 5
+        </button>
+
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room6.html')">
+            חדר 6
+        </button>
+
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room7.html')">
+            חדר 7
+        </button>
+
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room8.html')">
+            חדר 8
+        </button>
+
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room9.html')">
+            חדר 9
+        </button>
+
+        <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room10.html')">
+            חדר 10
         </button>
         
         <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/comptable.html')">
             הזמנת מחשבים
         </button>
     </div>
-
     <div id="content" style="display: none;">
         <iframe id="contentFrame" src=""></iframe>
     </div>
-
     <button id="backButton" class="button" style="display: none;" onclick="showMenu()">חזרה לתפריט</button>
-
     <script>
         function loadContent(url) {
             document.getElementById("menu").style.display = "none";
@@ -78,7 +107,6 @@
             document.getElementById("content").style.display = "block";
             document.getElementById("backButton").style.display = "block";
         }
-
         function showMenu() {
             document.getElementById("content").style.display = "none";
             document.getElementById("backButton").style.display = "none";
