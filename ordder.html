@@ -166,7 +166,6 @@
            100% { transform: translate(-50%, -50%) rotate(360deg); }
        }
 
-       /* מסכים בינוניים */
        @media (max-width: 1400px) {
            .container {
                width: 90%;
@@ -183,7 +182,6 @@
            }
        }
 
-       /* מסכים קטנים */
        @media (max-width: 768px) {
            .container {
                width: 95%;
@@ -192,9 +190,12 @@
            
            .grid {
                gap: 15px;
+               display: flex;
+               flex-direction: column;
            }
            
            .rooms-row {
+               display: grid;
                grid-template-columns: repeat(2, 1fr);
                gap: 15px;
                margin-bottom: 15px;
@@ -230,7 +231,6 @@
            }
        }
 
-       /* מסכים קטנים מאוד */
        @media (max-width: 480px) {
            .container {
                width: 100%;
@@ -278,19 +278,23 @@
            <div class="rooms-row">
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room1.html')">חדר 1</button>
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room2.html')">חדר 2</button>
+           </div>
+           <div class="rooms-row">
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room3.html')">חדר 3</button>
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room4.html')">חדר 4</button>
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room5.html')">חדר 5</button>
            </div>
-           
            <div class="rooms-row">
+               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room5.html')">חדר 5</button>
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room6.html')">חדר 6</button>
+           </div>
+           <div class="rooms-row">
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room7.html')">חדר 7</button>
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room8.html')">חדר 8</button>
+           </div>
+           <div class="rooms-row">
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room9.html')">חדר 9</button>
                <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room10.html')">חדר 10</button>
            </div>
-
            <div class="computer-row">
                <button class="button computer-button" onclick="loadContent('https://kobicomp.github.io/rooms/comptable.html')">
                    הזמנת מחשבים
@@ -323,7 +327,7 @@
        function showMenu() {
            document.getElementById("content").style.display = "none";
            document.getElementById("backButton").style.display = "none";
-           document.getElementById("menu").style.display = "grid";
+           document.getElementById("menu").style.display = "flex";
        }
    </script>
 </body>
