@@ -54,6 +54,29 @@
            max-width: 1000px;
            width: 100%;
        }
+       
+       .navigation-buttons {
+           position: fixed;
+           bottom: 10px;
+           left: 0;
+           right: 0;
+           display: flex;
+           justify-content: center;
+           gap: 10px;
+           z-index: 1000;
+           padding: 0 20px;
+       }
+
+       .nav-button {
+           padding: 12px 20px;
+           border-radius: 30px;
+           min-height: auto;
+           font-size: 16px;
+           background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+           box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+           margin: 0;
+           width: auto;
+       }
 
        .rooms-row {
            display: grid;
@@ -313,17 +336,42 @@
    <div id="content" style="display: none;">
        <iframe id="contentFrame" src=""></iframe>
    </div>
-   <button id="backButton" class="button" style="display: none;" onclick="showMenu()">חזרה לתפריט</button>
+   <div class="navigation-buttons" style="display: none;">
+       <button class="button nav-button" onclick="prevRoom()">חדר קודם</button>
+       <button id="backButton" class="button nav-button" onclick="showMenu()">חזרה לתפריט</button>
+       <button class="button nav-button" onclick="nextRoom()">חדר הבא</button>
+   </div>
 
    <script>
+       let currentRoom = 0;
+       const rooms = [
+           'https://kobicomp.github.io/rooms/room1.html',
+           'https://kobicomp.github.io/rooms/room2.html',
+           'https://kobicomp.github.io/rooms/room3.html',
+           'https://kobicomp.github.io/rooms/room4.html',
+           'https://kobicomp.github.io/rooms/room5.html',
+           'https://kobicomp.github.io/rooms/room6.html',
+           'https://kobicomp.github.io/rooms/room7.html',
+           'https://kobicomp.github.io/rooms/room8.html',
+           'https://kobicomp.github.io/rooms/room9.html',
+           'https://kobicomp.github.io/rooms/room10.html'
+       ];
+
        function loadContent(url) {
            const loading = document.getElementById("loading");
            loading.style.display = "block";
            
+           document.getElementById("menu").style.display = "grid";
            document.getElementById("menu").style.display = "none";
            document.getElementById("contentFrame").src = url;
            document.getElementById("content").style.display = "block";
-           document.getElementById("backButton").style.display = "block";
+           document.getElementsByClassName("navigation-buttons")[0].style.display = "flex";
+
+           // Update currentRoom if this is a room URL
+           const roomIndex = rooms.indexOf(url);
+           if (roomIndex !== -1) {
+               currentRoom = roomIndex;
+           }
 
            document.getElementById("contentFrame").onload = function() {
                loading.style.display = "none";
@@ -332,8 +380,22 @@
 
        function showMenu() {
            document.getElementById("content").style.display = "none";
-           document.getElementById("backButton").style.display = "none";
-           document.getElementById("menu").style.display = "flex";
+           document.getElementsByClassName("navigation-buttons")[0].style.display = "none";
+           document.getElementById("menu").style.display = "grid";
+       }
+
+       function nextRoom() {
+           if (currentRoom < rooms.length - 1) {
+               currentRoom++;
+               loadContent(rooms[currentRoom]);
+           }
+       }
+
+       function prevRoom() {
+           if (currentRoom > 0) {
+               currentRoom--;
+               loadContent(rooms[currentRoom]);
+           }
        }
    </script>
 </body>
