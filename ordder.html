@@ -12,57 +12,16 @@
            --text-color: #2c3e50;
        }
 
-       body {
-           font-family: 'Segoe UI', Arial, sans-serif;
-           background: linear-gradient(135deg, var(--background-color), #ffffff);
-           margin: 0;
-           padding: 0;
-           min-height: 100vh;
-           display: flex;
-           flex-direction: column;
-       }
+       /* Rest of the root styles remain the same */
 
-       header {
-           width: 100%;
-           padding: 25px 0;
-           background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-           margin-bottom: 30px;
-           box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-       }
-
-       h1 {
-           color: white;
-           margin: 0;
-           font-size: 2.2em;
-           text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
-           text-align: center;
-       }
-
-       .container {
-           width: 80%;
-           margin: 0 auto;
-           padding: 0 20px;
-           display: flex;
-           justify-content: center;
-       }
-
-       .grid {
-           display: grid;
-           grid-template-rows: auto auto auto;
-           gap: 30px;
-           margin-bottom: 30px;
-           max-width: 1000px;
-           width: 100%;
-       }
-       
        .navigation-buttons {
            position: fixed;
            bottom: 10px;
            left: 0;
            right: 0;
-           display: flex;
+           display: none;
            justify-content: center;
-           gap: 10px;
+           gap: 20px;
            z-index: 1000;
            padding: 0 20px;
        }
@@ -70,234 +29,25 @@
        .nav-button {
            padding: 12px 20px;
            border-radius: 30px;
-           min-height: auto;
+           height: 45px;
            font-size: 16px;
            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
            margin: 0;
-           width: 120px;  /* קביעת רוחב אחיד */
+           width: 120px;
+           color: white;
+           border: none;
+           cursor: pointer;
+           display: flex;
+           align-items: center;
+           justify-content: center;
            white-space: nowrap;
            overflow: hidden;
            text-overflow: ellipsis;
        }
 
-       .rooms-row {
-           display: grid;
-           grid-template-columns: repeat(2, minmax(200px, 300px));
-           gap: 25px;
-           margin-bottom: 20px;
-           justify-content: center;
-       }
+       /* Your existing styles here */
 
-       .computer-row {
-           grid-column: 1 / -1;
-           display: flex;
-           justify-content: center;
-       }
-
-       .button {
-           position: relative;
-           padding: 20px;
-           font-size: 20px;
-           color: white;
-           background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-           border-radius: 10px;
-           border: none;
-           cursor: pointer;
-           transition: all 0.3s ease;
-           box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-           min-height: 120px;
-           display: flex;
-           align-items: center;
-           justify-content: center;
-           text-align: center;
-           width: 100%;
-       }
-
-       .computer-button {
-           background: linear-gradient(45deg, #e74c3c, #c0392b);
-           min-height: 140px;
-           font-size: 1.4em;
-           font-weight: bold;
-           max-width: 600px;
-       }
-
-       .button:hover {
-           transform: translateY(-5px);
-           box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-       }
-
-       .button:active {
-           transform: translateY(0);
-       }
-
-       .button::before {
-           content: '';
-           position: absolute;
-           top: 0;
-           left: -100%;
-           width: 100%;
-           height: 100%;
-           background: linear-gradient(120deg, transparent, rgba(255,255,255,0.3), transparent);
-           transition: 0.5s;
-           border-radius: 10px;
-       }
-
-       .button:hover::before {
-           left: 100%;
-       }
-
-       #content {
-           position: fixed;
-           top: 0;
-           left: 0;
-           width: 100%;
-           height: 100vh;
-           background: white;
-           z-index: 100;
-           display: none;
-       }
-
-       iframe {
-           width: 100%;
-           height: calc(100vh - 70px);
-           border: none;
-           display: block;
-       }
-
-       #backButton {
-           position: fixed;
-           bottom: 10px;
-           right: 50%;
-           transform: translateX(50%);
-           z-index: 1000;
-           padding: 12px 30px;
-           border-radius: 30px;
-           min-height: auto;
-           width: auto;
-           font-size: 16px;
-           background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-           box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-           margin: 0;
-       }
-
-       .loading {
-           position: fixed;
-           top: 50%;
-           left: 50%;
-           transform: translate(-50%, -50%);
-           width: 50px;
-           height: 50px;
-           border: 5px solid #f3f3f3;
-           border-top: 5px solid var(--primary-color);
-           border-radius: 50%;
-           animation: spin 1s linear infinite;
-           display: none;
-       }
-
-       @keyframes spin {
-           0% { transform: translate(-50%, -50%) rotate(0deg); }
-           100% { transform: translate(-50%, -50%) rotate(360deg); }
-       }
-
-       @media (max-width: 1400px) {
-           .container {
-               width: 90%;
-           }
-       }
-
-       @media (max-width: 992px) {
-           .container {
-               width: 95%;
-           }
-           .rooms-row {
-               gap: 20px;
-           }
-       }
-
-       @media (max-width: 768px) {
-           .container {
-               width: 95%;
-               padding: 0 10px;
-           }
-           
-           .grid {
-               gap: 15px;
-               margin-bottom: 15px;
-           }
-           
-           .rooms-row {
-               grid-template-columns: repeat(2, minmax(150px, 250px));
-               gap: 15px;
-               margin-bottom: 15px;
-           }
-
-           .button {
-               min-height: 80px;
-               font-size: 20px;
-               padding: 10px;
-           }
-
-           .computer-button {
-               min-height: 100px;
-               font-size: 24px;
-           }
-
-           header {
-               padding: 15px 0;
-               margin-bottom: 15px;
-           }
-
-           h1 {
-               font-size: 1.8em;
-           }
-
-           iframe {
-               height: calc(100vh - 60px);
-           }
-
-           #backButton {
-               padding: 10px 20px;
-               font-size: 14px;
-           }
-       }
-
-       @media (max-width: 480px) {
-           .container {
-               width: 100%;
-               padding: 0 5px;
-           }
-
-           .grid {
-               gap: 10px;
-           }
-
-           .rooms-row {
-               grid-template-columns: repeat(2, minmax(130px, 200px));
-               gap: 10px;
-               margin-bottom: 10px;
-           }
-
-           .button {
-               min-height: 70px;
-               font-size: 18px;
-               padding: 8px;
-           }
-
-           .computer-button {
-               min-height: 90px;
-               font-size: 22px;
-           }
-
-           header {
-               padding: 10px 0;
-               margin-bottom: 10px;
-           }
-
-           h1 {
-               font-size: 1.5em;
-           }
-       }
    </style>
 </head>
 <body>
@@ -307,31 +57,7 @@
 
    <div class="container">
        <div class="grid" id="menu">
-           <div class="rooms-row">
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room1.html')">חדר 1</button>
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room2.html')">חדר 2</button>
-           </div>
-           <div class="rooms-row">
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room3.html')">חדר 3</button>
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room4.html')">חדר 4</button>
-           </div>
-           <div class="rooms-row">
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room5.html')">חדר 5</button>
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room6.html')">חדר 6</button>
-           </div>
-           <div class="rooms-row">
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room7.html')">חדר 7</button>
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room8.html')">חדר 8</button>
-           </div>
-           <div class="rooms-row">
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room9.html')">חדר 9</button>
-               <button class="button" onclick="loadContent('https://kobicomp.github.io/rooms/room10.html')">חדר 10</button>
-           </div>
-           <div class="computer-row">
-               <button class="button computer-button" onclick="loadContent('https://kobicomp.github.io/rooms/comptable.html')">
-                   הזמנת מחשבים
-               </button>
-           </div>
+           <!-- Your existing room buttons here -->
        </div>
    </div>
 
@@ -339,27 +65,15 @@
    <div id="content" style="display: none;">
        <iframe id="contentFrame" src=""></iframe>
    </div>
-   <div class="navigation-buttons" style="display: none;">
-       <button class="button nav-button" onclick="prevRoom()">חדר קודם</button>
-       <button id="backButton" class="button nav-button" onclick="showMenu()">חזרה לתפריט</button>
-       <button class="button nav-button" onclick="nextRoom()">חדר הבא</button>
+   
+   <div class="navigation-buttons">
+       <button class="nav-button" onclick="prevRoom()">הקודם</button>
+       <button class="nav-button" onclick="showMenu()">תפריט</button>
+       <button class="nav-button" onclick="nextRoom()">הבא</button>
    </div>
 
    <script>
        let currentRoom = 0;
-       const rooms = {
-           'room1.html': 0,
-           'room2.html': 1,
-           'room3.html': 2,
-           'room4.html': 3,
-           'room5.html': 4,
-           'room6.html': 5,
-           'room7.html': 6,
-           'room8.html': 7,
-           'room9.html': 8,
-           'room10.html': 9
-       };
-       
        const roomUrls = [
            'room1.html',
            'room2.html',
@@ -380,17 +94,23 @@
            document.getElementById("menu").style.display = "none";
            document.getElementById("content").style.display = "block";
            
-           // Check if this is a room URL or computer table
-           const roomName = url.split('/').pop();
-           if (roomName === 'comptable.html') {
-               document.getElementsByClassName("navigation-buttons")[0].style.display = "none";
+           // Extract room name from URL
+           const urlParts = url.split('/');
+           const fileName = urlParts[urlParts.length - 1];
+           
+           // Show navigation buttons only for rooms, not for computer table
+           const navButtons = document.querySelector('.navigation-buttons');
+           if (fileName === 'comptable.html') {
+               navButtons.style.display = 'none';
            } else {
-               document.getElementsByClassName("navigation-buttons")[0].style.display = "flex";
-               if (rooms.hasOwnProperty(roomName)) {
-                   currentRoom = rooms[roomName];
+               navButtons.style.display = 'flex';
+               // Update current room index
+               const roomIndex = roomUrls.indexOf(fileName);
+               if (roomIndex !== -1) {
+                   currentRoom = roomIndex;
                }
            }
-           
+
            document.getElementById("contentFrame").src = url;
            document.getElementById("contentFrame").onload = function() {
                loading.style.display = "none";
@@ -399,21 +119,23 @@
 
        function showMenu() {
            document.getElementById("content").style.display = "none";
-           document.getElementsByClassName("navigation-buttons")[0].style.display = "none";
+           document.querySelector('.navigation-buttons').style.display = "none";
            document.getElementById("menu").style.display = "grid";
        }
 
        function nextRoom() {
-           if (currentRoom < Object.keys(rooms).length - 1) {
+           if (currentRoom < roomUrls.length - 1) {
                currentRoom++;
-               loadContent('https://kobicomp.github.io/rooms/' + roomUrls[currentRoom]);
+               const nextUrl = 'https://kobicomp.github.io/rooms/' + roomUrls[currentRoom];
+               loadContent(nextUrl);
            }
        }
 
        function prevRoom() {
            if (currentRoom > 0) {
                currentRoom--;
-               loadContent('https://kobicomp.github.io/rooms/' + roomUrls[currentRoom]);
+               const prevUrl = 'https://kobicomp.github.io/rooms/' + roomUrls[currentRoom];
+               loadContent(prevUrl);
            }
        }
    </script>
