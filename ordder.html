@@ -42,6 +42,8 @@
            width: 80%;
            margin: 0 auto;
            padding: 0 20px;
+           display: flex;
+           justify-content: center;
        }
 
        .grid {
@@ -49,17 +51,22 @@
            grid-template-rows: auto auto auto;
            gap: 30px;
            margin-bottom: 30px;
+           max-width: 1000px;
+           width: 100%;
        }
 
        .rooms-row {
            display: grid;
-           grid-template-columns: repeat(5, 1fr);
+           grid-template-columns: repeat(2, minmax(200px, 300px));
            gap: 25px;
            margin-bottom: 20px;
+           justify-content: center;
        }
 
        .computer-row {
            grid-column: 1 / -1;
+           display: flex;
+           justify-content: center;
        }
 
        .button {
@@ -86,6 +93,7 @@
            min-height: 140px;
            font-size: 1.4em;
            font-weight: bold;
+           max-width: 600px;
        }
 
        .button:hover {
@@ -177,7 +185,6 @@
                width: 95%;
            }
            .rooms-row {
-               grid-template-columns: repeat(3, 1fr);
                gap: 20px;
            }
        }
@@ -190,13 +197,11 @@
            
            .grid {
                gap: 15px;
-               display: flex;
-               flex-direction: column;
+               margin-bottom: 15px;
            }
            
            .rooms-row {
-               display: grid;
-               grid-template-columns: repeat(2, 1fr);
+               grid-template-columns: repeat(2, minmax(150px, 250px));
                gap: 15px;
                margin-bottom: 15px;
            }
@@ -242,6 +247,7 @@
            }
 
            .rooms-row {
+               grid-template-columns: repeat(2, minmax(130px, 200px));
                gap: 10px;
                margin-bottom: 10px;
            }
