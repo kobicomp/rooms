@@ -75,7 +75,10 @@
            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
            margin: 0;
-           width: auto;
+           width: 120px;  /* קביעת רוחב אחיד */
+           white-space: nowrap;
+           overflow: hidden;
+           text-overflow: ellipsis;
        }
 
        .rooms-row {
@@ -344,35 +347,51 @@
 
    <script>
        let currentRoom = 0;
-       const rooms = [
-           'https://kobicomp.github.io/rooms/room1.html',
-           'https://kobicomp.github.io/rooms/room2.html',
-           'https://kobicomp.github.io/rooms/room3.html',
-           'https://kobicomp.github.io/rooms/room4.html',
-           'https://kobicomp.github.io/rooms/room5.html',
-           'https://kobicomp.github.io/rooms/room6.html',
-           'https://kobicomp.github.io/rooms/room7.html',
-           'https://kobicomp.github.io/rooms/room8.html',
-           'https://kobicomp.github.io/rooms/room9.html',
-           'https://kobicomp.github.io/rooms/room10.html'
+       const rooms = {
+           'room1.html': 0,
+           'room2.html': 1,
+           'room3.html': 2,
+           'room4.html': 3,
+           'room5.html': 4,
+           'room6.html': 5,
+           'room7.html': 6,
+           'room8.html': 7,
+           'room9.html': 8,
+           'room10.html': 9
+       };
+       
+       const roomUrls = [
+           'room1.html',
+           'room2.html',
+           'room3.html',
+           'room4.html',
+           'room5.html',
+           'room6.html',
+           'room7.html',
+           'room8.html',
+           'room9.html',
+           'room10.html'
        ];
 
        function loadContent(url) {
            const loading = document.getElementById("loading");
            loading.style.display = "block";
            
-           document.getElementById("menu").style.display = "grid";
            document.getElementById("menu").style.display = "none";
-           document.getElementById("contentFrame").src = url;
            document.getElementById("content").style.display = "block";
-           document.getElementsByClassName("navigation-buttons")[0].style.display = "flex";
-
-           // Update currentRoom if this is a room URL
-           const roomIndex = rooms.indexOf(url);
-           if (roomIndex !== -1) {
-               currentRoom = roomIndex;
+           
+           // Check if this is a room URL or computer table
+           const roomName = url.split('/').pop();
+           if (roomName === 'comptable.html') {
+               document.getElementsByClassName("navigation-buttons")[0].style.display = "none";
+           } else {
+               document.getElementsByClassName("navigation-buttons")[0].style.display = "flex";
+               if (rooms.hasOwnProperty(roomName)) {
+                   currentRoom = rooms[roomName];
+               }
            }
-
+           
+           document.getElementById("contentFrame").src = url;
            document.getElementById("contentFrame").onload = function() {
                loading.style.display = "none";
            };
@@ -385,16 +404,16 @@
        }
 
        function nextRoom() {
-           if (currentRoom < rooms.length - 1) {
+           if (currentRoom < Object.keys(rooms).length - 1) {
                currentRoom++;
-               loadContent(rooms[currentRoom]);
+               loadContent('https://kobicomp.github.io/rooms/' + roomUrls[currentRoom]);
            }
        }
 
        function prevRoom() {
            if (currentRoom > 0) {
                currentRoom--;
-               loadContent(rooms[currentRoom]);
+               loadContent('https://kobicomp.github.io/rooms/' + roomUrls[currentRoom]);
            }
        }
    </script>
