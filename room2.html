@@ -501,46 +501,48 @@
                 return null;
             },
 
-           async handleSubmit(event) {
-    event.preventDefault();
+            async handleSubmit(event) {
+                event.preventDefault();
 
-    const formData = {
-        'שם המורה': document.getElementById('teacher').value,
-        'כיתה': document.getElementById('class').value,
-        'תאריך': document.getElementById('selected-date').value,
-        'שעה במערכת': document.getElementById('selected-hour').value,
-        'מקצוע': document.getElementById('subject').value,
-        'שם החדר': CONFIG.room.name
-    };
+                const formData = {
+                    'שם המורה': document.getElementById('teacher').value,
+                    'כיתה': document.getElementById('class').value,
+                    'תאריך': document.getElementById('selected-date').value,
+                    'שעה במערכת': document.getElementById('selected-hour').value,
+                    'מקצוע': document.getElementById('subject').value,
+                    'שם החדר': CONFIG.room.name
+                };
 
-    try {
-        // בדיקת מספר הזמנות למורה
-        const weekStart = moment(formData['תאריך']).startOf('week');
-        const teacherBookings = this.countWeeklyBookings('שם המורה', formData['שם המורה'], weekStart);
-        if (teacherBookings >= CONFIG.maxWeeklyBookings) {
-            throw new Error(`למורה ${formData['שם המורה']} כבר יש ${CONFIG.maxWeeklyBookings} שיעורים השבוע`);
-        }
+                try {
+                    const key = `${formData.תאריך}_${formData['שעה במערכת']}_${formData['שם החדר']}`;
+                    if (this.getBookingForSlot(formData.תאריך, parseInt(formData['שעה במערכת']))) {
+                        throw new Error('החדר כבר תפוס בשעה זו');
+                    }
 
-        // בדיקת מספר הזמנות לכיתה
-        const classBookings = this.countWeeklyBookings('כיתה', formData['כיתה'], weekStart);
-        if (classBookings >= CONFIG.maxWeeklyBookings) {
-            throw new Error(`לכיתה ${formData['כיתה']} כבר יש ${CONFIG.maxWeeklyBookings} שיעורים השבוע`);
-        }
+                    this.tempBookingsManager.addBooking(formData);
+                    this.renderSchedule();
 
-        // בדיקה שהחדר פנוי
-        const key = `${formData.תאריך}_${formData['שעה במערכת']}_${formData['שם החדר']}`;
-        if (this.getBookingForSlot(formData.תאריך, parseInt(formData['שעה במערכת']))) {
-            throw new Error('החדר כבר תפוס בשעה זו');
-        }
+                    const googleFormData = new FormData();
+                    googleFormData.append(CONFIG.formFields.teacher, formData['שם המורה']);
+                    googleFormData.append(CONFIG.formFields.class, formData['כיתה']);
+                    googleFormData.append(CONFIG.formFields.date, formData['תאריך']);
+                    googleFormData.append(CONFIG.formFields.hour, formData['שעה במערכת']);
+                    googleFormData.append(CONFIG.formFields.subject, formData['מקצוע']);
+                    googleFormData.append(CONFIG.formFields.room, formData['שם החדר']);
 
-        // המשך הקוד הקיים...
-        this.tempBookingsManager.addBooking(formData);
-        // ...
-    } catch (error) {
-        document.getElementById('error-message').textContent = error.message;
-        return; // חשוב! מניעת המשך התהליך במקרה של שגיאה
-    }
-},
+                    await fetch(CONFIG.urls.form, {
+                        method: 'POST',
+                        body: googleFormData,
+                        mode: 'no-cors'
+                    });
+
+                    this.startStatusCheck(formData);
+                    this.closeForm();
+                    alert('ההזמנה נשלחה ונמצאת בבדיקה. תקבל עדכון כשההזמנה תאושר.');
+                } catch (error) {
+                    document.getElementById('error-message').textContent = error.message;
+                }
+            },
 
             renderSchedule() {
                 const tbody = document.querySelector('#schedule tbody');
